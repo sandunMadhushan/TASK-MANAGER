@@ -13,6 +13,7 @@ export function requireAuth(req, res, next) {
       id: String(payload.sub),
       email: String(payload.email ?? ''),
       name: String(payload.name ?? ''),
+      workspaceId: String(payload.workspaceId ?? payload.sub ?? ''),
     }
     return next()
   } catch {

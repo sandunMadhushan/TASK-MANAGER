@@ -17,6 +17,12 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       maxlength: 120,
     },
+    workspaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: false,
+      index: true,
+    },
   },
   {
     timestamps: { createdAt: true, updatedAt: false },

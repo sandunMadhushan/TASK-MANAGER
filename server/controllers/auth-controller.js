@@ -1,5 +1,10 @@
 import { signAccessToken } from '../services/auth-service.js'
-import { createUser, getUserByEmail, getUserById } from '../services/user-service.js'
+import {
+  createUser,
+  ensureUserWorkspace,
+  getUserByEmail,
+  getUserById,
+} from '../services/user-service.js'
 
 export async function loginHandler(req, res, next) {
   try {
@@ -8,7 +13,11 @@ export async function loginHandler(req, res, next) {
       return res.status(400).json({ message: 'Email is required.' })
     }
 
-    const user = await getUserByEmail(email)
+    const foundUser = await getUserByEmail(email)
+    if (!foundUser) {
+      return res.status(401).json({ message: 'Invalid credentials.' })
+    }
+    const user = await ensureUserWorkspace(foundUser.id)
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials.' })
     }

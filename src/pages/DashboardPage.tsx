@@ -7,6 +7,7 @@ import { CreateTaskModal } from '@/components/tasks/CreateTaskModal'
 import { TaskListView } from '@/components/tasks/TaskListView'
 import { Button } from '@/components/ui/button'
 import { isDueWithinDays } from '@/lib/format-due-date'
+import { useAuthStore } from '@/store/auth-store'
 import { useTaskStore } from '@/store/task-store'
 
 export function DashboardPage() {
@@ -14,7 +15,9 @@ export function DashboardPage() {
   const [createSession, setCreateSession] = useState(0)
   const [searchParams] = useSearchParams()
   const tasks = useTaskStore((s) => s.tasks)
+  const currentUser = useAuthStore((s) => s.currentUser)
   const searchText = (searchParams.get('q') ?? '').trim().toLowerCase()
+  const firstName = (currentUser?.name ?? 'there').split(' ')[0]
 
   function openCreateModal() {
     setCreateSession((s) => s + 1)
@@ -59,7 +62,7 @@ export function DashboardPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-2">
             <h1 className="font-heading text-3xl font-semibold tracking-tight text-balance md:text-4xl">
-              Good afternoon, Alex
+              Good afternoon, {firstName}
             </h1>
             <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
               Manage tasks with smooth interactions and real backend sync.

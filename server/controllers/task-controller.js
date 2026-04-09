@@ -2,7 +2,7 @@ import {
   createTask,
   deleteTask,
   getTaskById,
-  getTasks,
+  getTasksForUser,
   updateTask,
   updateTaskStatus,
 } from '../services/task-service.js'
@@ -16,6 +16,8 @@ const statusValues = new Set(['todo', 'in-progress', 'done'])
 
 export async function createTaskHandler(req, res, next) {
   try {
+    const currentUserId = req.user?.id
+    const workspaceId = req.user?.workspaceId
     const { title, description, status, assignedToIds, assignedTo, dueDate } = req.body ?? {}
 
     if (!title || typeof title !== 'string') {
@@ -31,7 +33,7 @@ export async function createTaskHandler(req, res, next) {
     }
     const normalizedAssigneeIds = normalizeAssigneeIds(assignedToIds ?? assignedTo)
     if (normalizedAssigneeIds.length > 0) {
-      const users = await getUsersByIds(normalizedAssigneeIds)
+      const users = await getUsersByIds(normalizedAssigneeIds, workspaceId)
       if (users.length !== normalizedAssigneeIds.length) {
         return res.status(400).json({ message: 'One or more assigned users not found' })
       }
@@ -42,6 +44,8 @@ export async function createTaskHandler(req, res, next) {
       description,
       status,
       assignedToIds: normalizedAssigneeIds,
+      createdById: currentUserId,
+      workspaceId,
       dueDate,
     })
 
@@ -54,9 +58,14 @@ export async function createTaskHandler(req, res, next) {
   }
 }
 
-export async function getTasksHandler(_req, res, next) {
+export async function getTasksHandler(req, res, next) {
   try {
-    const tasks = await getTasks()
+    const currentUserId = req.user?.id
+    const workspaceId = req.user?.workspaceId
+    if (!currentUserId) {
+      return res.status(401).json({ message: 'Unauthorized' })
+    }
+    const tasks = await getTasksForUser(currentUserId, workspaceId)
     return res.status(200).json(tasks)
   } catch (error) {
     return next(error)
@@ -65,6 +74,7 @@ export async function getTasksHandler(_req, res, next) {
 
 export async function updateTaskStatusHandler(req, res, next) {
   try {
+    const currentUserId = req.user?.id
     const { taskId } = req.params
     const { status } = req.body ?? {}
 
@@ -73,6 +83,9 @@ export async function updateTaskStatusHandler(req, res, next) {
     }
 
     const previousTask = await getTaskById(taskId)
+    if (!canAccessTask(previousTask, currentUserId)) {
+      return res.status(404).json({ message: 'Task not found' })
+    }
     const task = await updateTaskStatus(taskId, status)
     if (!task) {
       return res.status(404).json({ message: 'Task not found' })
@@ -90,6 +103,8 @@ export async function updateTaskStatusHandler(req, res, next) {
 
 export async function updateTaskHandler(req, res, next) {
   try {
+    const currentUserId = req.user?.id
+    const workspaceId = req.user?.workspaceId
     const { taskId } = req.params
     const { title, description, status, assignedToIds, assignedTo, dueDate } = req.body ?? {}
 
@@ -108,13 +123,16 @@ export async function updateTaskHandler(req, res, next) {
       : undefined
 
     if (normalizedAssigneeIds && normalizedAssigneeIds.length > 0) {
-      const users = await getUsersByIds(normalizedAssigneeIds)
+      const users = await getUsersByIds(normalizedAssigneeIds, workspaceId)
       if (users.length !== normalizedAssigneeIds.length) {
         return res.status(400).json({ message: 'One or more assigned users not found' })
       }
     }
 
     const previousTask = await getTaskById(taskId)
+    if (!canAccessTask(previousTask, currentUserId)) {
+      return res.status(404).json({ message: 'Task not found' })
+    }
 
     const task = await updateTask(taskId, {
       title,
@@ -174,7 +192,12 @@ async function runNotificationSafely(notify) {
 
 export async function deleteTaskHandler(req, res, next) {
   try {
+    const currentUserId = req.user?.id
     const { taskId } = req.params
+    const task = await getTaskById(taskId)
+    if (!canAccessTask(task, currentUserId)) {
+      return res.status(404).json({ message: 'Task not found' })
+    }
     const deleted = await deleteTask(taskId)
 
     if (!deleted) {
@@ -185,4 +208,19 @@ export async function deleteTaskHandler(req, res, next) {
   } catch (error) {
     return next(error)
   }
+}
+
+function canAccessTask(task, userId) {
+  if (!task || !userId) return false
+  const createdById =
+    task.createdBy && typeof task.createdBy === 'object'
+      ? task.createdBy.id
+      : task.createdBy
+  if (String(createdById ?? '') === String(userId)) return true
+  const assigned = Array.isArray(task.assignedTo) ? task.assignedTo : []
+  return assigned.some((value) => {
+    if (typeof value === 'string') return value === userId
+    if (value && typeof value === 'object' && value.id) return value.id === userId
+    return false
+  })
 }

@@ -6,9 +6,10 @@ import {
 } from '../services/user-service.js'
 import { createNovuSubscriberHash } from '../services/novu-auth-service.js'
 
-export async function getUsersHandler(_req, res, next) {
+export async function getUsersHandler(req, res, next) {
   try {
-    const users = await getUsers()
+    const workspaceId = req.user?.workspaceId
+    const users = await getUsers(workspaceId)
     return res.status(200).json(users)
   } catch (error) {
     return next(error)
@@ -37,12 +38,13 @@ export async function getNovuSubscriberAuthHandler(req, res, next) {
 
 export async function createUserHandler(req, res, next) {
   try {
+    const workspaceId = req.user?.workspaceId
     const name = String(req.body?.name ?? '').trim()
     const email = String(req.body?.email ?? '').trim().toLowerCase()
     if (!name || !email) {
       return res.status(400).json({ message: 'Name and email are required.' })
     }
-    const user = await createUser({ name, email })
+    const user = await createUser({ name, email, workspaceId })
     return res.status(201).json(user)
   } catch (error) {
     if (error?.code === 11000) {
@@ -54,6 +56,7 @@ export async function createUserHandler(req, res, next) {
 
 export async function updateUserHandler(req, res, next) {
   try {
+    const workspaceId = req.user?.workspaceId
     const { userId } = req.params
     const name = req.body?.name !== undefined ? String(req.body.name).trim() : undefined
     const email =
@@ -66,7 +69,7 @@ export async function updateUserHandler(req, res, next) {
       return res.status(400).json({ message: 'Email cannot be empty.' })
     }
 
-    const user = await updateUser(userId, { name, email })
+    const user = await updateUser(userId, { name, email }, workspaceId)
     if (!user) {
       return res.status(404).json({ message: 'User not found.' })
     }
@@ -81,8 +84,9 @@ export async function updateUserHandler(req, res, next) {
 
 export async function deleteUserHandler(req, res, next) {
   try {
+    const workspaceId = req.user?.workspaceId
     const { userId } = req.params
-    const deleted = await deleteUser(userId)
+    const deleted = await deleteUser(userId, workspaceId)
     if (!deleted) {
       return res.status(404).json({ message: 'User not found.' })
     }

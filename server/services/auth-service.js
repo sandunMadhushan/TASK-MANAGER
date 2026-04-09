@@ -8,6 +8,7 @@ export function signAccessToken(user) {
       sub: String(user.id),
       email: user.email,
       name: user.name,
+      workspaceId: user.workspaceId ? String(user.workspaceId) : String(user.id),
     },
     env.authJwtSecret,
     { expiresIn: env.authJwtExpiresIn }

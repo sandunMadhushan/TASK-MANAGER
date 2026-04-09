@@ -11,11 +11,23 @@ const defaultUsers = [
 export async function ensureDefaultUsers() {
   const count = await UserModel.countDocuments()
   if (count > 0) return
-  await UserModel.insertMany(defaultUsers)
+  const inserted = await UserModel.insertMany(defaultUsers)
+  await Promise.all(
+    inserted.map((user) =>
+      UserModel.findByIdAndUpdate(user._id, { workspaceId: user._id })
+    )
+  )
 }
 
-export async function getUsers() {
-  const users = await UserModel.find().sort({ name: 1 })
+function normalizeWorkspaceId(workspaceId) {
+  if (!workspaceId) return null
+  return String(workspaceId)
+}
+
+export async function getUsers(workspaceId) {
+  const workspace = normalizeWorkspaceId(workspaceId)
+  const query = workspace ? { workspaceId: workspace } : {}
+  const users = await UserModel.find(query).sort({ name: 1 })
   return users.map((user) => user.toJSON())
 }
 
@@ -31,34 +43,68 @@ export async function getUserByEmail(email) {
   return user ? user.toJSON() : null
 }
 
-export async function getUsersByIds(userIds) {
+export async function ensureUserWorkspace(userId) {
+  if (!userId) return null
+  const user = await UserModel.findById(userId)
+  if (!user) return null
+  if (!user.workspaceId) {
+    user.workspaceId = user._id
+    await user.save()
+  }
+  return user.toJSON()
+}
+
+export async function getUsersByIds(userIds, workspaceId) {
   if (!Array.isArray(userIds) || userIds.length === 0) return []
-  const users = await UserModel.find({ _id: { $in: userIds } })
+  const query = { _id: { $in: userIds } }
+  const workspace = normalizeWorkspaceId(workspaceId)
+  if (workspace) {
+    query.workspaceId = workspace
+  }
+  const users = await UserModel.find(query)
   return users.map((user) => user.toJSON())
 }
 
 export async function createUser(payload) {
-  const user = await UserModel.create({
+  let user = await UserModel.create({
     name: payload.name,
     email: payload.email,
+    workspaceId: payload.workspaceId,
   })
+  if (!user.workspaceId) {
+    user = await UserModel.findByIdAndUpdate(
+      user._id,
+      { workspaceId: user._id },
+      { new: true }
+    )
+  }
   return user.toJSON()
 }
 
-export async function updateUser(userId, payload) {
+export async function updateUser(userId, payload, workspaceId) {
   const update = {}
   if (payload.name !== undefined) update.name = payload.name
   if (payload.email !== undefined) update.email = payload.email
+  const query = { _id: userId }
+  const workspace = normalizeWorkspaceId(workspaceId)
+  if (workspace) {
+    query.workspaceId = workspace
+  }
 
-  const user = await UserModel.findByIdAndUpdate(userId, update, {
+  const user = await UserModel.findOneAndUpdate(query, update, {
     new: true,
     runValidators: true,
   })
   return user ? user.toJSON() : null
 }
 
-export async function deleteUser(userId) {
-  const user = await UserModel.findByIdAndDelete(userId)
+export async function deleteUser(userId, workspaceId) {
+  const query = { _id: userId }
+  const workspace = normalizeWorkspaceId(workspaceId)
+  if (workspace) {
+    query.workspaceId = workspace
+  }
+  const user = await UserModel.findOneAndDelete(query)
   if (!user) return false
   await unassignUserFromAllTasks(userId)
   return true

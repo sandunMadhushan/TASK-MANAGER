@@ -11,6 +11,8 @@ export async function createTask(payload) {
     description: payload.description ?? '',
     status: payload.status ?? 'todo',
     assignedTo: payload.assignedToIds ?? [],
+    createdBy: payload.createdById,
+    workspaceId: payload.workspaceId,
     dueDate: payload.dueDate,
   })
 
@@ -18,8 +20,20 @@ export async function createTask(payload) {
   return hydrated.toJSON()
 }
 
-export async function getTasks() {
-  const tasks = await TaskModel.find().populate('assignedTo').sort({ createdAt: -1 })
+export async function getTasksForUser(userId, workspaceId) {
+  const baseQuery = {
+    $or: [{ createdBy: userId }, { assignedTo: userId }],
+  }
+  if (workspaceId) {
+    baseQuery.$and = [
+      {
+        $or: [{ workspaceId }, { workspaceId: { $exists: false } }],
+      },
+    ]
+  }
+  const tasks = await TaskModel.find(baseQuery)
+    .populate('assignedTo')
+    .sort({ createdAt: -1 })
   return tasks.map((task) => task.toJSON())
 }
 
