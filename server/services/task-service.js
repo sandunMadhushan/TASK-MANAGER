@@ -57,3 +57,11 @@ export async function deleteTask(taskId) {
   const deleted = await TaskModel.findByIdAndDelete(taskId)
   return Boolean(deleted)
 }
+
+export async function unassignUserFromAllTasks(userId) {
+  if (!userId) return
+  await TaskModel.updateMany(
+    { assignedTo: userId },
+    { $pull: { assignedTo: userId } }
+  )
+}

@@ -163,6 +163,31 @@ export async function fetchUsersApi(): Promise<User[]> {
   return request<User[]>('/users')
 }
 
+type UserInput = {
+  name: string
+  email: string
+}
+
+export async function createUserApi(input: UserInput): Promise<User> {
+  return request<User>('/users', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function updateUserApi(userId: string, input: UserInput): Promise<User> {
+  return request<User>(`/users/${userId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function deleteUserApi(userId: string): Promise<void> {
+  await request<{ message: string }>(`/users/${userId}`, {
+    method: 'DELETE',
+  })
+}
+
 export type NovuSubscriberAuth = {
   subscriberId: string
   subscriberHash: string | null
