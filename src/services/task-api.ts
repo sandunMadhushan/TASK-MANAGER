@@ -52,13 +52,16 @@ function toDateInputValue(value: string): string {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const requestUrl = `${API_BASE_URL}${path}`
+  const requestInit: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
       ...(init?.headers ?? {}),
     },
     ...init,
-  })
+  }
+
+  const response = await fetchWithTransientRetry(requestUrl, requestInit)
 
   if (!response.ok) {
     let message = `Request failed with status ${response.status}`
@@ -72,6 +75,31 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return (await response.json()) as T
+}
+
+async function fetchWithTransientRetry(
+  requestUrl: string,
+  requestInit: RequestInit
+): Promise<Response> {
+  try {
+    return await fetch(requestUrl, requestInit)
+  } catch (error) {
+    // API dev server can briefly restart while watching files; retry once.
+    if (!isTransientNetworkError(error)) throw error
+    await delay(350)
+    return fetch(requestUrl, requestInit)
+  }
+}
+
+function isTransientNetworkError(error: unknown): boolean {
+  return (
+    error instanceof TypeError &&
+    error.message.toLowerCase().includes('failed to fetch')
+  )
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 export async function fetchTasksApi(): Promise<Task[]> {
