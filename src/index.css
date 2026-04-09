@@ -131,3 +131,40 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 }
+
+@layer utilities {
+  .scrollbar-glass {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(167 139 250 / 0.55) rgb(255 255 255 / 0.08);
+  }
+
+  .scrollbar-glass::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .scrollbar-glass::-webkit-scrollbar-track {
+    border-radius: 9999px;
+    background: rgb(255 255 255 / 0.08);
+  }
+
+  .scrollbar-glass::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 9999px;
+    background: linear-gradient(
+      180deg,
+      rgb(192 132 252 / 0.8),
+      rgb(139 92 246 / 0.7)
+    );
+    background-clip: padding-box;
+  }
+
+  .scrollbar-glass::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+      180deg,
+      rgb(216 180 254 / 0.95),
+      rgb(167 139 250 / 0.9)
+    );
+    background-clip: padding-box;
+  }
+}

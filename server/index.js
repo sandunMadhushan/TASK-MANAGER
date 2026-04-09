@@ -1,10 +1,12 @@
 import { app } from './app.js'
 import { connectDatabase } from './config/db.js'
 import { env, validateEnv } from './config/env.js'
+import { ensureDefaultUsers } from './services/user-service.js'
 
 async function bootstrap() {
   validateEnv()
   await connectDatabase(env.mongoUri)
+  await ensureDefaultUsers()
 
   app.listen(env.port, () => {
     console.log(`API server running on http://localhost:${env.port}`)

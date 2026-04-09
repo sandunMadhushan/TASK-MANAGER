@@ -1,4 +1,5 @@
 import type { Task, TaskStatus } from '@/types/task'
+import type { User } from '@/types/user'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.trim()
   ? (import.meta.env.VITE_API_URL as string).trim()
@@ -9,20 +10,34 @@ type TaskDto = {
   title: string
   description: string
   status: TaskStatus
-  assignedTo?: string | null
+  assignedTo?: string | User | Array<string | User> | null
   dueDate: string
   createdAt?: string
 }
 
 function mapTaskDto(dto: TaskDto): Task {
+  const rawAssignees = Array.isArray(dto.assignedTo)
+    ? dto.assignedTo
+    : dto.assignedTo
+      ? [dto.assignedTo]
+      : []
+
+  const assignees = rawAssignees.filter(
+    (v): v is User => typeof v === 'object' && v !== null
+  )
+  const assignedToIds = rawAssignees
+    .map((v) => (typeof v === 'string' ? v : v.id))
+    .filter(Boolean)
+
   return {
     id: dto.id,
     title: dto.title,
     description: dto.description ?? '',
     status: dto.status,
-    tag: dto.assignedTo ? 'Assigned' : 'General',
+    tag: assignees.length > 0 ? `${assignees.length} assignee(s)` : 'Unassigned',
     dueDate: toDateInputValue(dto.dueDate),
-    assignedTo: dto.assignedTo ?? null,
+    assignedToIds,
+    assignees,
     createdAt: dto.createdAt,
   }
 }
@@ -69,7 +84,7 @@ type CreateTaskInput = {
   description: string
   status: TaskStatus
   dueDate: string
-  assignedTo?: string | null
+  assignedToIds?: string[]
 }
 
 export async function createTaskApi(input: CreateTaskInput): Promise<Task> {
@@ -91,8 +106,31 @@ export async function updateTaskStatusApi(
   return mapTaskDto(data)
 }
 
+type UpdateTaskInput = {
+  title: string
+  description: string
+  status: TaskStatus
+  dueDate: string
+  assignedToIds?: string[]
+}
+
+export async function updateTaskApi(
+  taskId: string,
+  input: UpdateTaskInput
+): Promise<Task> {
+  const data = await request<TaskDto>(`/tasks/${taskId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+  return mapTaskDto(data)
+}
+
 export async function deleteTaskApi(taskId: string): Promise<void> {
   await request<{ message: string }>(`/tasks/${taskId}`, {
     method: 'DELETE',
   })
+}
+
+export async function fetchUsersApi(): Promise<User[]> {
+  return request<User[]>('/users')
 }

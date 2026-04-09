@@ -4,6 +4,7 @@ import morgan from 'morgan'
 
 import { env } from './config/env.js'
 import { taskRouter } from './routes/task-routes.js'
+import { userRouter } from './routes/user-routes.js'
 
 export const app = express()
 
@@ -20,6 +21,7 @@ app.get('/api/health', (_req, res) => {
 })
 
 app.use('/api/tasks', taskRouter)
+app.use('/api/users', userRouter)
 
 app.use((req, res) => {
   res.status(404).json({ message: `Route not found: ${req.method} ${req.path}` })

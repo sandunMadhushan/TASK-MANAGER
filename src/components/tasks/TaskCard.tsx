@@ -1,8 +1,10 @@
 import { motion } from 'framer-motion'
-import { CalendarDays, Loader2, Trash2 } from 'lucide-react'
+import { CalendarDays, Loader2, Pencil, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { EditTaskModal } from '@/components/tasks/EditTaskModal'
 import {
   Card,
   CardContent,
@@ -29,12 +31,19 @@ type TaskCardProps = {
 }
 
 export function TaskCard({ task, index }: TaskCardProps) {
+  const [editOpen, setEditOpen] = useState(false)
+  const [editSession, setEditSession] = useState(0)
   const deleteTask = useTaskStore((s) => s.deleteTask)
   const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus)
   const updatingTaskId = useTaskStore((s) => s.updatingTaskId)
   const deletingTaskId = useTaskStore((s) => s.deletingTaskId)
   const isUpdating = updatingTaskId === task.id
   const isDeleting = deletingTaskId === task.id
+
+  function openEdit() {
+    setEditSession((s) => s + 1)
+    setEditOpen(true)
+  }
 
   return (
     <motion.div
@@ -49,6 +58,12 @@ export function TaskCard({ task, index }: TaskCardProps) {
       }}
       whileHover={{ y: -4 }}
     >
+      <EditTaskModal
+        key={`${task.id}-${editSession}`}
+        task={task}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
       <Card
         className={cn(
           'border-white/10 bg-card/70 shadow-xl shadow-black/25 ring-1 ring-white/10 backdrop-blur-xl transition-[transform,box-shadow] duration-300',
@@ -68,6 +83,14 @@ export function TaskCard({ task, index }: TaskCardProps) {
               <CardDescription className="line-clamp-2">
                 {task.description}
               </CardDescription>
+              <p className="pt-1 text-[11px] text-muted-foreground">
+                Assigned to:{' '}
+                <span className="font-medium text-foreground/90">
+                  {task.assignees?.length
+                    ? task.assignees.map((u) => u.name).join(', ')
+                    : 'Unassigned'}
+                </span>
+              </p>
             </div>
           </div>
         </CardHeader>
@@ -105,15 +128,10 @@ export function TaskCard({ task, index }: TaskCardProps) {
         </CardContent>
 
         <CardFooter className="justify-between gap-2 border-white/10 bg-white/3">
-          <div className="flex -space-x-2">
-            {['SK', 'LM', 'JR'].map((initials) => (
-              <div
-                key={initials}
-                className="flex size-8 items-center justify-center rounded-full border border-white/10 bg-linear-to-br from-white/15 to-white/5 text-[10px] font-semibold text-foreground shadow-sm"
-              >
-                {initials}
-              </div>
-            ))}
+          <div className="text-xs text-muted-foreground">
+            {task.assignees?.length
+              ? task.assignees.map((u) => u.email).join(', ')
+              : 'No assignee email'}
           </div>
           <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             {isUpdating || isDeleting ? (
@@ -125,6 +143,17 @@ export function TaskCard({ task, index }: TaskCardProps) {
               <span>Synced</span>
             )}
           </div>
+          <Button
+            aria-label={`Edit ${task.title}`}
+            size="sm"
+            variant="ghost"
+            type="button"
+            className="hover:bg-white/10"
+            disabled={isDeleting || isUpdating}
+            onClick={openEdit}
+          >
+            <Pencil className="size-4" />
+          </Button>
           <Button
             aria-label={`Delete ${task.title}`}
             size="sm"

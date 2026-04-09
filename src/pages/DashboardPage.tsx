@@ -13,6 +13,7 @@ export function DashboardPage() {
   const [createSession, setCreateSession] = useState(0)
   const tasks = useTaskStore((s) => s.tasks)
   const fetchTasks = useTaskStore((s) => s.fetchTasks)
+  const fetchUsers = useTaskStore((s) => s.fetchUsers)
 
   function openCreateModal() {
     setCreateSession((s) => s + 1)
@@ -21,7 +22,8 @@ export function DashboardPage() {
 
   useEffect(() => {
     void fetchTasks()
-  }, [fetchTasks])
+    void fetchUsers()
+  }, [fetchTasks, fetchUsers])
 
   const { activeCount, dueSoonCount } = useMemo(() => {
     const active = tasks.filter((t) => t.status !== 'done').length

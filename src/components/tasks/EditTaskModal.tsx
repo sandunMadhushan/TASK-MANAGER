@@ -19,27 +19,27 @@ import {
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { todayIsoDate } from '@/lib/format-due-date'
 import { useTaskStore } from '@/store/task-store'
-import type { TaskStatus } from '@/types/task'
+import type { Task, TaskStatus } from '@/types/task'
 
-type CreateTaskModalProps = {
+type EditTaskModalProps = {
+  task: Task
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
-  const addTask = useTaskStore((s) => s.addTask)
+export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) {
+  const editTask = useTaskStore((s) => s.editTask)
   const users = useTaskStore((s) => s.users)
   const isUsersLoading = useTaskStore((s) => s.isUsersLoading)
-  const isCreating = useTaskStore((s) => s.isCreating)
+  const isEditing = useTaskStore((s) => s.isEditing)
   const error = useTaskStore((s) => s.error)
 
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [status, setStatus] = useState<TaskStatus>('todo')
-  const [dueDate, setDueDate] = useState(todayIsoDate())
-  const [assignedToIds, setAssignedToIds] = useState<string[]>([])
+  const [title, setTitle] = useState(task.title)
+  const [description, setDescription] = useState(task.description)
+  const [status, setStatus] = useState<TaskStatus>(task.status)
+  const [dueDate, setDueDate] = useState(task.dueDate)
+  const [assignedToIds, setAssignedToIds] = useState(task.assignedToIds ?? [])
   const [titleError, setTitleError] = useState('')
 
   function toggleAssignee(userId: string) {
@@ -56,14 +56,14 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
       return
     }
     setTitleError('')
-    const created = await addTask({
+    const updated = await editTask(task.id, {
       title: trimmed,
       description: description.trim(),
       status,
       dueDate,
       assignedToIds,
     })
-    if (created) {
+    if (updated) {
       onOpenChange(false)
     }
   }
@@ -80,9 +80,9 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
           transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         >
           <DialogHeader>
-            <DialogTitle>Create task</DialogTitle>
+            <DialogTitle>Edit task</DialogTitle>
             <DialogDescription>
-              This creates a real task via the backend API.
+              Update task details and keep assignment in sync with users.
             </DialogDescription>
           </DialogHeader>
 
@@ -94,13 +94,12 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
             ) : null}
 
             <Field data-invalid={!!titleError || undefined}>
-              <FieldLabel htmlFor="task-title">Title</FieldLabel>
+              <FieldLabel htmlFor={`edit-task-title-${task.id}`}>Title</FieldLabel>
               <FieldContent>
                 <Input
-                  id="task-title"
+                  id={`edit-task-title-${task.id}`}
                   autoComplete="off"
                   aria-invalid={!!titleError}
-                  placeholder="e.g. Draft API contract"
                   value={title}
                   onChange={(e) => {
                     setTitle(e.target.value)
@@ -112,12 +111,13 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="task-description">Description</FieldLabel>
+              <FieldLabel htmlFor={`edit-task-description-${task.id}`}>
+                Description
+              </FieldLabel>
               <FieldContent>
                 <Textarea
-                  id="task-description"
+                  id={`edit-task-description-${task.id}`}
                   className="min-h-[88px] resize-y"
-                  placeholder="Context, acceptance criteria, links…"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
@@ -125,13 +125,13 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="task-status">Status</FieldLabel>
+              <FieldLabel htmlFor={`edit-task-status-${task.id}`}>Status</FieldLabel>
               <FieldContent>
-                <Select
-                  value={status}
-                  onValueChange={(v) => setStatus(v as TaskStatus)}
-                >
-                  <SelectTrigger id="task-status" className="w-full min-w-0">
+                <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
+                  <SelectTrigger
+                    id={`edit-task-status-${task.id}`}
+                    className="w-full min-w-0"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -144,10 +144,10 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="task-due">Due date</FieldLabel>
+              <FieldLabel htmlFor={`edit-task-due-${task.id}`}>Due date</FieldLabel>
               <FieldContent>
                 <Input
-                  id="task-due"
+                  id={`edit-task-due-${task.id}`}
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
@@ -190,19 +190,19 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
               <Button
                 type="button"
                 variant="outline"
-                disabled={isCreating}
+                disabled={isEditing}
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isCreating}>
-                {isCreating ? (
+              <Button type="submit" disabled={isEditing}>
+                {isEditing ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    Creating...
+                    Updating...
                   </>
                 ) : (
-                  'Create task'
+                  'Save changes'
                 )}
               </Button>
             </div>

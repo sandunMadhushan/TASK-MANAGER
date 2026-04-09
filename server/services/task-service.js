@@ -5,15 +5,16 @@ export async function createTask(payload) {
     title: payload.title,
     description: payload.description ?? '',
     status: payload.status ?? 'todo',
-    assignedTo: payload.assignedTo ?? null,
+    assignedTo: payload.assignedToIds ?? [],
     dueDate: payload.dueDate,
   })
 
-  return task.toJSON()
+  const hydrated = await TaskModel.findById(task._id).populate('assignedTo')
+  return hydrated.toJSON()
 }
 
 export async function getTasks() {
-  const tasks = await TaskModel.find().sort({ createdAt: -1 })
+  const tasks = await TaskModel.find().populate('assignedTo').sort({ createdAt: -1 })
   return tasks.map((task) => task.toJSON())
 }
 
@@ -24,7 +25,27 @@ export async function updateTaskStatus(taskId, status) {
     { new: true, runValidators: true }
   )
 
-  return task ? task.toJSON() : null
+  if (!task) return null
+  const hydrated = await TaskModel.findById(task._id).populate('assignedTo')
+  return hydrated.toJSON()
+}
+
+export async function updateTask(taskId, payload) {
+  const update = {}
+  if (payload.title !== undefined) update.title = payload.title
+  if (payload.description !== undefined) update.description = payload.description
+  if (payload.status !== undefined) update.status = payload.status
+  if (payload.dueDate !== undefined) update.dueDate = payload.dueDate
+  if (payload.assignedToIds !== undefined) update.assignedTo = payload.assignedToIds
+
+  const task = await TaskModel.findByIdAndUpdate(taskId, update, {
+    new: true,
+    runValidators: true,
+  })
+
+  if (!task) return null
+  const hydrated = await TaskModel.findById(task._id).populate('assignedTo')
+  return hydrated.toJSON()
 }
 
 export async function deleteTask(taskId) {

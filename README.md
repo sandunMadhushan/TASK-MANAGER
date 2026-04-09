@@ -41,12 +41,12 @@ Non-goals for early steps: shipping production auth or APIs before their dedicat
 | Step 1 — Frontend setup & UI foundation | **Done** | Vite + React + TS, Tailwind v4, ShadCN, Framer Motion, glass dashboard shell, dummy task cards. No backend or auth. |
 | Step 2 — Task UI (frontend only) | **Done** | `TaskCard`, `TaskListView`, `CreateTaskModal`; Zustand task store; add/remove/status animations; title validation. No API. |
 | Step 3 — Backend setup | **Done** | Express API in `server/`, MongoDB config, Mongoose `TaskModel`, create/list/update-status/delete routes. |
-| Step 4 — Connect frontend ↔ API | **Done** | Frontend now uses backend APIs for list/create/status update/delete with loading + error states. |
-| Step 5 — Users & assignment | Not started | User model, assign tasks, show assignee in UI. |
+| Step 4 — Connect frontend ↔ API | **Done** | Frontend now uses backend APIs for list/create/edit/status update/delete with loading + error states. |
+| Step 5 — Users & assignment | **Done** | Added `User` model + `/api/users`; task assignment validates user IDs; UI select + assignee display. |
 | Step 6 — Novu integration | Not started | Triggers: assigned, completed, deadline near. |
 | Step 7 — UI polish | Not started | Micro-interactions, skeletons, empty states, responsiveness. |
 
-**Last README update:** 2026-04-09 (Steps 1–4 complete).
+**Last README update:** 2026-04-09 (Steps 1–5 complete).
 
 ---
 
@@ -83,13 +83,13 @@ Use this as the single checklist for planning and for updating the [Current stat
 
 - [x] API client in `src/services/` (`task-api.ts`)
 - [x] Replaced dummy/local seed list with real requests
-- [x] Added loading and error states (`TaskListView`, `CreateTaskModal`, status updates)
+- [x] Added loading and error states (`TaskListView`, create/edit modals, status updates)
 
 ### Step 5 — Users + assignment
 
-- [ ] **User** model and minimal user APIs or seed data
-- [ ] Assign task to user; persist `assignedTo`
-- [ ] Show assignee on cards / detail views
+- [x] **User** model and minimal user APIs with default user seeding
+- [x] Assign task to user; persist `assignedTo`
+- [x] Show assignee on task cards and create-task form
 
 ### Step 6 — Novu integration
 
@@ -253,7 +253,7 @@ npm run preview   # optional local preview of dist/
 
 ---
 
-## Backend API (Step 3)
+## Backend API (Step 3-5)
 
 Base URL: `http://localhost:4000/api`
 
@@ -262,8 +262,10 @@ Base URL: `http://localhost:4000/api`
 | `GET` | `/health` | Health check |
 | `GET` | `/tasks` | List tasks |
 | `POST` | `/tasks` | Create a task |
+| `PATCH` | `/tasks/:taskId` | Edit task details |
 | `PATCH` | `/tasks/:taskId/status` | Update task status |
 | `DELETE` | `/tasks/:taskId` | Delete a task |
+| `GET` | `/users` | List assignable users |
 
 Create payload:
 

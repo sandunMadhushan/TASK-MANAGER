@@ -23,11 +23,12 @@ const taskSchema = new mongoose.Schema(
       default: 'todo',
       required: true,
     },
-    assignedTo: {
-      type: String,
-      default: null,
-      trim: true,
-    },
+    assignedTo: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
     dueDate: {
       type: Date,
       required: true,
