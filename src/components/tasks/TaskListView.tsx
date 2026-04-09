@@ -3,6 +3,7 @@ import { AlertCircle, LayoutList, Plus, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { TaskCard } from '@/components/tasks/TaskCard'
+import { useSettingsStore } from '@/store/settings-store'
 import { useTaskStore } from '@/store/task-store'
 import type { Task } from '@/types/task'
 
@@ -23,13 +24,16 @@ export function TaskListView({
   const isLoading = useTaskStore((s) => s.isLoading)
   const error = useTaskStore((s) => s.error)
   const fetchTasks = useTaskStore((s) => s.fetchTasks)
-  const reduceMotion = useReducedMotion()
+  const prefersReducedMotion = useReducedMotion()
+  const forceReducedMotion = useSettingsStore((s) => s.reducedMotion)
+  const compactCards = useSettingsStore((s) => s.compactCards)
+  const reduceMotion = prefersReducedMotion || forceReducedMotion
   const renderedTasks = tasks ?? storeTasks
 
   if (isLoading) {
     return (
       <motion.div
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+        className={compactCards ? 'grid gap-3 sm:grid-cols-2 xl:grid-cols-3' : 'grid gap-4 sm:grid-cols-2 xl:grid-cols-3'}
         initial={reduceMotion ? false : { opacity: 0 }}
         animate={reduceMotion ? undefined : { opacity: 1 }}
       >
@@ -106,7 +110,7 @@ export function TaskListView({
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className={compactCards ? 'grid gap-3 sm:grid-cols-2 xl:grid-cols-3' : 'grid gap-4 sm:grid-cols-2 xl:grid-cols-3'}>
       <AnimatePresence mode="popLayout">
         {renderedTasks.map((task, index) => (
           <TaskCard key={task.id} index={index} task={task} />

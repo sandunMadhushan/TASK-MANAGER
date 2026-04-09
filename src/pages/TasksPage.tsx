@@ -16,15 +16,15 @@ import {
 } from '@/components/ui/select'
 import { useTaskStore } from '@/store/task-store'
 import type { TaskStatus } from '@/types/task'
+import { useSettingsStore } from '@/store/settings-store'
 
 export function TasksPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [createSession, setCreateSession] = useState(0)
   const [searchParams, setSearchParams] = useSearchParams()
   const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all')
-  const [sortBy, setSortBy] = useState<'due-asc' | 'due-desc' | 'newest' | 'oldest' | 'title'>(
-    'due-asc'
-  )
+  const sortBy = useSettingsStore((s) => s.defaultTaskSort)
+  const setDefaultTaskSort = useSettingsStore((s) => s.setDefaultTaskSort)
   const tasks = useTaskStore((s) => s.tasks)
   const users = useTaskStore((s) => s.users)
   const assigneeFilter = searchParams.get('assignee') ?? 'all'
@@ -197,7 +197,7 @@ export function TasksPage() {
             <Select
               value={sortBy}
               onValueChange={(value) =>
-                setSortBy(value as 'due-asc' | 'due-desc' | 'newest' | 'oldest' | 'title')
+                setDefaultTaskSort(value as 'due-asc' | 'due-desc' | 'newest' | 'oldest' | 'title')
               }
             >
               <SelectTrigger

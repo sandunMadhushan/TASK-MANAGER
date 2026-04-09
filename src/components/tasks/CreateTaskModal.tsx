@@ -41,6 +41,11 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
   const [dueDate, setDueDate] = useState(todayIsoDate())
   const [assignedToIds, setAssignedToIds] = useState<string[]>([])
   const [titleError, setTitleError] = useState('')
+  const statusLabel: Record<TaskStatus, string> = {
+    todo: 'To do',
+    'in-progress': 'In progress',
+    done: 'Done',
+  }
 
   function toggleAssignee(userId: string) {
     setAssignedToIds((prev) =>
@@ -132,7 +137,7 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
                   onValueChange={(v) => setStatus(v as TaskStatus)}
                 >
                   <SelectTrigger id="task-status" className="w-full min-w-0">
-                    <SelectValue />
+                    <SelectValue>{statusLabel[status]}</SelectValue>
                   </SelectTrigger>
                   <SelectContent side="bottom" sideOffset={8} align="start" alignItemWithTrigger={false}>
                     <SelectItem value="todo">To do</SelectItem>

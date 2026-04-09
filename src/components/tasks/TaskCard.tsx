@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select'
 import { formatDueDateLabel } from '@/lib/format-due-date'
 import { cn } from '@/lib/utils'
+import { useSettingsStore } from '@/store/settings-store'
 import { useTaskStore } from '@/store/task-store'
 import type { Task, TaskStatus } from '@/types/task'
 
@@ -33,7 +34,10 @@ type TaskCardProps = {
 export function TaskCard({ task, index }: TaskCardProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [editSession, setEditSession] = useState(0)
-  const reduceMotion = useReducedMotion()
+  const prefersReducedMotion = useReducedMotion()
+  const forceReducedMotion = useSettingsStore((s) => s.reducedMotion)
+  const compactCards = useSettingsStore((s) => s.compactCards)
+  const reduceMotion = prefersReducedMotion || forceReducedMotion
   const users = useTaskStore((s) => s.users)
   const deleteTask = useTaskStore((s) => s.deleteTask)
   const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus)
@@ -73,6 +77,7 @@ export function TaskCard({ task, index }: TaskCardProps) {
         onOpenChange={setEditOpen}
       />
       <Card
+        size={compactCards ? 'sm' : 'default'}
         className={cn(
           'border-white/10 bg-card/70 shadow-xl shadow-black/25 ring-1 ring-white/10 backdrop-blur-xl transition-[transform,box-shadow] duration-300',
           'hover:shadow-2xl hover:shadow-violet-500/10'

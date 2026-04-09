@@ -41,6 +41,11 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
   const [dueDate, setDueDate] = useState(task.dueDate)
   const [assignedToIds, setAssignedToIds] = useState(task.assignedToIds ?? [])
   const [titleError, setTitleError] = useState('')
+  const statusLabel: Record<TaskStatus, string> = {
+    todo: 'To do',
+    'in-progress': 'In progress',
+    done: 'Done',
+  }
 
   function toggleAssignee(userId: string) {
     setAssignedToIds((prev) =>
@@ -132,7 +137,7 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
                     id={`edit-task-status-${task.id}`}
                     className="w-full min-w-0"
                   >
-                    <SelectValue />
+                    <SelectValue>{statusLabel[status]}</SelectValue>
                   </SelectTrigger>
                   <SelectContent side="bottom" sideOffset={8} align="start" alignItemWithTrigger={false}>
                     <SelectItem value="todo">To do</SelectItem>

@@ -7,11 +7,13 @@ import { NotificationsPage } from '@/pages/NotificationsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { TasksPage } from '@/pages/TasksPage'
 import { TeamPage } from '@/pages/TeamPage'
+import { useSettingsStore } from '@/store/settings-store'
 import { useTaskStore } from '@/store/task-store'
 
 function App() {
   const fetchTasks = useTaskStore((s) => s.fetchTasks)
   const fetchUsers = useTaskStore((s) => s.fetchUsers)
+  const reducedMotion = useSettingsStore((s) => s.reducedMotion)
   const location = useLocation()
 
   useEffect(() => {
@@ -30,6 +32,10 @@ function App() {
     const section = pageTitleByPath[location.pathname] ?? 'Dashboard'
     document.title = `${section} | Nexus Tasks`
   }, [location.pathname])
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('reduce-motion', reducedMotion)
+  }, [reducedMotion])
 
   return (
     <DashboardLayout>
