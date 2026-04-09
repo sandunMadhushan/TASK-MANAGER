@@ -2,6 +2,7 @@ import { Novu } from '@novu/api'
 
 import { env } from '../config/env.js'
 import { TaskModel } from '../models/task-model.js'
+import { createNovuSubscriberHash } from './novu-auth-service.js'
 
 const novu =
   env.novuSecretKey
@@ -132,4 +133,88 @@ export async function getUnreadNotificationCount(subscriberId) {
   const body = await response.json()
   const totalCount = body?.totalCount
   return typeof totalCount === 'number' && totalCount >= 0 ? totalCount : 0
+}
+
+async function createInboxSessionToken(subscriberId) {
+  if (!env.novuApplicationIdentifier) {
+    throw new Error('Missing VITE_NOVU_APPLICATION_IDENTIFIER in environment')
+  }
+  const subscriberHash = createNovuSubscriberHash(subscriberId)
+
+  const response = await fetch(new URL('/v1/inbox/session', novuRestBaseUrl), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'novu-api-version': '2024-06-26',
+    },
+    body: JSON.stringify({
+      applicationIdentifier: env.novuApplicationIdentifier,
+      subscriberId,
+      ...(subscriberHash ? { subscriberHash } : {}),
+    }),
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(`Unable to create Novu inbox session: ${response.status} ${text}`)
+  }
+
+  const body = await response.json()
+  const token = body?.data?.token
+  if (!token) {
+    throw new Error('Novu inbox session did not return token')
+  }
+  return token
+}
+
+export async function getNotificationFeed(subscriberId, { limit = 20, unreadOnly = false } = {}) {
+  if (!subscriberId) return []
+
+  const token = await createInboxSessionToken(subscriberId)
+  const url = new URL('/v1/inbox/notifications', novuRestBaseUrl)
+  url.searchParams.set('limit', String(Math.max(1, Math.min(limit, 50))))
+  url.searchParams.set('archived', 'false')
+  url.searchParams.set('snoozed', 'false')
+  if (unreadOnly) {
+    url.searchParams.set('read', 'false')
+  }
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'novu-api-version': '2024-06-26',
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(`Unable to fetch notifications feed: ${response.status} ${text}`)
+  }
+
+  const body = await response.json()
+  return Array.isArray(body?.data) ? body.data : []
+}
+
+export async function markAllNotificationsRead(subscriberId) {
+  if (!subscriberId) return { updated: 0 }
+
+  const unread = await getNotificationFeed(subscriberId, { limit: 50, unreadOnly: true })
+  if (unread.length === 0) return { updated: 0 }
+
+  const token = await createInboxSessionToken(subscriberId)
+  await Promise.all(
+    unread.map((item) =>
+      fetch(new URL(`/v1/inbox/notifications/${encodeURIComponent(item.id)}/read`, novuRestBaseUrl), {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'novu-api-version': '2024-06-26',
+          'Content-Type': 'application/json',
+        },
+      })
+    )
+  )
+
+  return { updated: unread.length }
 }

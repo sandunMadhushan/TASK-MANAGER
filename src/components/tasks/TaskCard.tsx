@@ -45,6 +45,11 @@ export function TaskCard({ task, index }: TaskCardProps) {
   const deletingTaskId = useTaskStore((s) => s.deletingTaskId)
   const isUpdating = updatingTaskId === task.id
   const isDeleting = deletingTaskId === task.id
+  const statusLabel: Record<TaskStatus, string> = {
+    todo: 'To do',
+    'in-progress': 'In progress',
+    done: 'Done',
+  }
   const resolvedAssignees =
     task.assignees && task.assignees.length > 0
       ? task.assignees
@@ -129,7 +134,7 @@ export function TaskCard({ task, index }: TaskCardProps) {
                 size="default"
                 disabled={isUpdating || isDeleting}
               >
-                <SelectValue />
+                <SelectValue>{statusLabel[task.status]}</SelectValue>
               </SelectTrigger>
               <SelectContent side="bottom" sideOffset={8} align="start" alignItemWithTrigger={false}>
                 <SelectItem value="todo">To do</SelectItem>

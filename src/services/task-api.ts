@@ -178,3 +178,32 @@ export async function fetchUnreadNotificationCountApi(subscriberId: string): Pro
   )
   return typeof result.unreadCount === 'number' ? Math.max(0, result.unreadCount) : 0
 }
+
+export type NotificationFeedItem = {
+  id: string
+  subject?: string
+  body?: string
+  createdAt?: string
+  isRead?: boolean
+}
+
+export async function fetchNotificationFeedApi(
+  subscriberId: string,
+  options?: { limit?: number; unreadOnly?: boolean }
+): Promise<NotificationFeedItem[]> {
+  const search = new URLSearchParams()
+  if (options?.limit) search.set('limit', String(options.limit))
+  if (options?.unreadOnly) search.set('unreadOnly', 'true')
+  const suffix = search.toString() ? `?${search.toString()}` : ''
+  const result = await request<{ notifications: NotificationFeedItem[] }>(
+    `/notifications/feed/${subscriberId}${suffix}`
+  )
+  return Array.isArray(result.notifications) ? result.notifications : []
+}
+
+export async function markAllNotificationsReadApi(subscriberId: string): Promise<number> {
+  const result = await request<{ updated: number }>(`/notifications/mark-all-read/${subscriberId}`, {
+    method: 'POST',
+  })
+  return typeof result.updated === 'number' ? result.updated : 0
+}

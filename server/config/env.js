@@ -8,6 +8,7 @@ export const env = {
   mongoUri: process.env.MONGODB_URI ?? '',
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
   novuSecretKey: process.env.NOVU_API_KEY ?? '',
+  novuApplicationIdentifier: process.env.VITE_NOVU_APPLICATION_IDENTIFIER ?? '',
   novuBackendUrl: process.env.NOVU_BACKEND_URL ?? '',
   novuWorkflowTaskAssigned: process.env.NOVU_WORKFLOW_TASK_ASSIGNED ?? '',
   novuWorkflowTaskCompleted: process.env.NOVU_WORKFLOW_TASK_COMPLETED ?? '',
