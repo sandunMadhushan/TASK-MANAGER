@@ -64,9 +64,18 @@ export function NovuInboxBell() {
           variant="ghost"
           type="button"
         >
-          <Bell className="size-[18px]" />
-          {hasUnread(unreadCount) ? (
-            <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary shadow-[0_0_12px_rgba(167,139,250,0.9)]" />
+          <Bell
+            className={`size-[18px] transition-colors ${
+              getUnreadCount(unreadCount) > 0 ? 'text-violet-300' : ''
+            }`}
+          />
+          {getUnreadCount(unreadCount) > 0 ? (
+            <>
+              <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary shadow-[0_0_12px_rgba(167,139,250,0.9)]" />
+              <span className="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-violet-500 px-1 text-[10px] font-semibold leading-4 text-white">
+                {formatUnreadCount(getUnreadCount(unreadCount))}
+              </span>
+            </>
           ) : null}
         </Button>
       )}
@@ -74,14 +83,19 @@ export function NovuInboxBell() {
   )
 }
 
-function hasUnread(value: unknown): boolean {
-  if (typeof value === 'number') return value > 0
+function getUnreadCount(value: unknown): number {
+  if (typeof value === 'number') return Math.max(0, value)
   if (value && typeof value === 'object') {
     const record = value as Record<string, unknown>
-    const count = record.count
-    if (typeof count === 'number') return count > 0
+    if (typeof record.total === 'number') return Math.max(0, record.total)
+    if (typeof record.count === 'number') return Math.max(0, record.count)
   }
-  return false
+  return 0
+}
+
+function formatUnreadCount(value: number): string {
+  if (value > 99) return '99+'
+  return String(value)
 }
 
 function normalizeSocketUrl(value: string): string {
