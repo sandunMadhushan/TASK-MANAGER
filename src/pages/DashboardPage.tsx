@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { Plus } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { CreateTaskModal } from '@/components/tasks/CreateTaskModal'
 import { TaskListView } from '@/components/tasks/TaskListView'
@@ -12,18 +12,11 @@ export function DashboardPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [createSession, setCreateSession] = useState(0)
   const tasks = useTaskStore((s) => s.tasks)
-  const fetchTasks = useTaskStore((s) => s.fetchTasks)
-  const fetchUsers = useTaskStore((s) => s.fetchUsers)
 
   function openCreateModal() {
     setCreateSession((s) => s + 1)
     setCreateOpen(true)
   }
-
-  useEffect(() => {
-    void fetchTasks()
-    void fetchUsers()
-  }, [fetchTasks, fetchUsers])
 
   const { activeCount, dueSoonCount } = useMemo(() => {
     const active = tasks.filter((t) => t.status !== 'done').length

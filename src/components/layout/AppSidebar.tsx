@@ -7,6 +7,7 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react'
+import { NavLink } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -14,11 +15,11 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
 const nav = [
-  { icon: LayoutDashboard, label: 'Dashboard', active: true },
-  { icon: CheckSquare, label: 'Tasks', active: false },
-  { icon: Users, label: 'Team', active: false },
-  { icon: Bell, label: 'Notifications', active: false },
-  { icon: Settings2, label: 'Settings', active: false },
+  { icon: LayoutDashboard, label: 'Dashboard', to: '/dashboard' },
+  { icon: CheckSquare, label: 'Tasks', to: '/tasks' },
+  { icon: Users, label: 'Team', to: '/team' },
+  { icon: Bell, label: 'Notifications', to: '/notifications' },
+  { icon: Settings2, label: 'Settings', to: '/settings' },
 ] as const
 
 type AppSidebarProps = {
@@ -64,25 +65,22 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 ease: [0.22, 1, 0.36, 1],
               }}
             >
-              <button
-                type="button"
+              <NavLink
+                to={item.to}
                 className={cn(
                   'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors',
-                  item.active
-                    ? 'bg-white/10 text-foreground shadow-inner ring-1 ring-white/10'
-                    : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
+                  'text-muted-foreground hover:bg-white/5 hover:text-foreground',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                  'aria-[current=page]:bg-white/10 aria-[current=page]:text-foreground aria-[current=page]:shadow-inner aria-[current=page]:ring-1 aria-[current=page]:ring-white/10'
                 )}
                 onClick={onNavigate}
               >
                 <item.icon
-                  className={cn(
-                    'size-[18px] shrink-0',
-                    item.active ? 'text-primary' : 'opacity-80'
-                  )}
+                  className="size-[18px] shrink-0 opacity-80"
                   aria-hidden
                 />
                 {item.label}
-              </button>
+              </NavLink>
             </motion.div>
           ))}
         </nav>
