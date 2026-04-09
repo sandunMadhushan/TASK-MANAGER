@@ -1,4 +1,7 @@
-import { sendDeadlineNearReminders } from '../services/notification-service.js'
+import {
+  getUnreadNotificationCount,
+  sendDeadlineNearReminders,
+} from '../services/notification-service.js'
 
 export async function sendDeadlineRemindersHandler(req, res, next) {
   try {
@@ -11,6 +14,20 @@ export async function sendDeadlineRemindersHandler(req, res, next) {
       hoursAhead,
       ...result,
     })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+export async function getUnreadCountHandler(req, res, next) {
+  try {
+    const { subscriberId } = req.params
+    if (!subscriberId) {
+      return res.status(400).json({ message: 'Missing subscriberId' })
+    }
+
+    const unreadCount = await getUnreadNotificationCount(subscriberId)
+    return res.status(200).json({ subscriberId, unreadCount })
   } catch (error) {
     return next(error)
   }

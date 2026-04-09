@@ -11,6 +11,8 @@ const novu =
       })
     : null
 
+const novuRestBaseUrl = env.novuBackendUrl || 'https://api.novu.co'
+
 function canSend(workflowId) {
   return Boolean(novu && workflowId)
 }
@@ -102,4 +104,32 @@ export async function sendDeadlineNearReminders(hoursAhead = 24) {
   }
 
   return { scanned: tasks.length, triggered }
+}
+
+export async function getUnreadNotificationCount(subscriberId) {
+  if (!env.novuSecretKey || !subscriberId) return 0
+
+  const url = new URL(
+    `/v1/subscribers/${encodeURIComponent(subscriberId)}/notifications/feed`,
+    novuRestBaseUrl
+  )
+  url.searchParams.set('page', '0')
+  url.searchParams.set('limit', '1')
+  url.searchParams.set('read', 'false')
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      Authorization: `ApiKey ${env.novuSecretKey}`,
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(`Unable to fetch unread count from Novu: ${response.status} ${text}`)
+  }
+
+  const body = await response.json()
+  const totalCount = body?.totalCount
+  return typeof totalCount === 'number' && totalCount >= 0 ? totalCount : 0
 }

@@ -3,7 +3,10 @@ import { Bell } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { fetchNovuSubscriberAuthApi } from '@/services/task-api'
+import {
+  fetchNovuSubscriberAuthApi,
+  fetchUnreadNotificationCountApi,
+} from '@/services/task-api'
 import { useTaskStore } from '@/store/task-store'
 
 const APP_ID = import.meta.env.VITE_NOVU_APPLICATION_IDENTIFIER as string | undefined
@@ -21,6 +24,8 @@ type SubscriberConfig = {
 export function NovuInboxBell() {
   const users = useTaskStore((s) => s.users)
   const [subscriberConfig, setSubscriberConfig] = useState<SubscriberConfig | null>(null)
+  const [serverUnreadCount, setServerUnreadCount] = useState<number | null>(null)
+  const [hasAuthError, setHasAuthError] = useState(false)
 
   const currentUserId = useMemo(() => {
     if (users.length === 0) return null
@@ -36,21 +41,23 @@ export function NovuInboxBell() {
     async function loadSubscriberAuth() {
       if (!currentUserId) {
         setSubscriberConfig(null)
+        setHasAuthError(false)
         return
       }
 
       try {
         const auth = await fetchNovuSubscriberAuthApi(currentUserId)
         if (cancelled) return
+        setHasAuthError(false)
         setSubscriberConfig(
           auth.subscriberHash
             ? { subscriberId: auth.subscriberId, subscriberHash: auth.subscriberHash }
             : { subscriberId: auth.subscriberId }
         )
       } catch {
-        // Fallback without hash in case auth endpoint is temporarily unavailable.
         if (cancelled) return
-        setSubscriberConfig({ subscriberId: currentUserId })
+        setHasAuthError(true)
+        setSubscriberConfig(null)
       }
     }
 
@@ -61,9 +68,37 @@ export function NovuInboxBell() {
     }
   }, [currentUserId])
 
+  useEffect(() => {
+    let cancelled = false
+
+    async function refreshUnreadCount() {
+      if (!subscriberConfig?.subscriberId) {
+        if (!cancelled) setServerUnreadCount(null)
+        return
+      }
+
+      try {
+        const count = await fetchUnreadNotificationCountApi(subscriberConfig.subscriberId)
+        if (!cancelled) setServerUnreadCount(count)
+      } catch {
+        if (!cancelled) setServerUnreadCount(null)
+      }
+    }
+
+    void refreshUnreadCount()
+    const intervalId = window.setInterval(() => {
+      void refreshUnreadCount()
+    }, 1500)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+    }
+  }, [subscriberConfig?.subscriberId])
+
   const configured = Boolean(APP_ID && subscriberConfig)
 
-  if (!configured) {
+  if (!configured || hasAuthError) {
     return (
       <Button
         aria-label="Open notifications"
@@ -81,7 +116,8 @@ export function NovuInboxBell() {
   return (
     <Inbox
       applicationIdentifier={APP_ID!}
-      subscriber={subscriberConfig!}
+      subscriber={subscriberConfig!.subscriberId}
+      subscriberHash={subscriberConfig?.subscriberHash}
       backendUrl={BACKEND_URL}
       socketUrl={SOCKET_URL}
       socketOptions={{ socketType: 'self-hosted' }}
@@ -95,27 +131,34 @@ export function NovuInboxBell() {
         },
       }}
       renderBell={(unreadCount) => (
-        <Button
-          aria-label="Open notifications"
-          className="relative hidden sm:inline-flex"
-          size="icon-sm"
-          variant="ghost"
-          type="button"
-        >
-          <Bell
-            className={`size-[18px] transition-colors ${
-              getUnreadCount(unreadCount) > 0 ? 'text-violet-300' : ''
-            }`}
-          />
-          {getUnreadCount(unreadCount) > 0 ? (
-            <>
-              <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary shadow-[0_0_12px_rgba(167,139,250,0.9)]" />
-              <span className="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-violet-500 px-1 text-[10px] font-semibold leading-4 text-white">
-                {formatUnreadCount(getUnreadCount(unreadCount))}
-              </span>
-            </>
-          ) : null}
-        </Button>
+        (() => {
+          const effectiveUnread =
+            serverUnreadCount !== null ? serverUnreadCount : getUnreadCount(unreadCount)
+
+          return (
+            <Button
+              aria-label="Open notifications"
+              className="relative hidden sm:inline-flex"
+              size="icon-sm"
+              variant="ghost"
+              type="button"
+            >
+              <Bell
+                className={`size-[18px] transition-colors ${
+                  effectiveUnread > 0 ? 'text-violet-300' : ''
+                }`}
+              />
+              {effectiveUnread > 0 ? (
+                <>
+                  <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary shadow-[0_0_12px_rgba(167,139,250,0.9)]" />
+                  <span className="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-violet-500 px-1 text-[10px] font-semibold leading-4 text-white">
+                    {formatUnreadCount(effectiveUnread)}
+                  </span>
+                </>
+              ) : null}
+            </Button>
+          )
+        })()
       )}
     />
   )

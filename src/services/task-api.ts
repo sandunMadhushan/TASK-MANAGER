@@ -171,3 +171,10 @@ export type NovuSubscriberAuth = {
 export async function fetchNovuSubscriberAuthApi(userId: string): Promise<NovuSubscriberAuth> {
   return request<NovuSubscriberAuth>(`/users/${userId}/novu-auth`)
 }
+
+export async function fetchUnreadNotificationCountApi(subscriberId: string): Promise<number> {
+  const result = await request<{ subscriberId: string; unreadCount: number }>(
+    `/notifications/unread-count/${subscriberId}`
+  )
+  return typeof result.unreadCount === 'number' ? Math.max(0, result.unreadCount) : 0
+}
