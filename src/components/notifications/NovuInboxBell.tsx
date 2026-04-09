@@ -3,10 +3,7 @@ import { Bell } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import {
-  fetchNovuSubscriberAuthApi,
-  fetchUnreadNotificationCountApi,
-} from '@/services/task-api'
+import { fetchNovuSubscriberAuthApi } from '@/services/task-api'
 import { useTaskStore } from '@/store/task-store'
 
 const APP_ID = import.meta.env.VITE_NOVU_APPLICATION_IDENTIFIER as string | undefined
@@ -24,7 +21,6 @@ type SubscriberConfig = {
 export function NovuInboxBell() {
   const users = useTaskStore((s) => s.users)
   const [subscriberConfig, setSubscriberConfig] = useState<SubscriberConfig | null>(null)
-  const [serverUnreadCount, setServerUnreadCount] = useState<number | null>(null)
   const [hasAuthError, setHasAuthError] = useState(false)
 
   const currentUserId = useMemo(() => {
@@ -68,34 +64,6 @@ export function NovuInboxBell() {
     }
   }, [currentUserId])
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function refreshUnreadCount() {
-      if (!subscriberConfig?.subscriberId) {
-        if (!cancelled) setServerUnreadCount(null)
-        return
-      }
-
-      try {
-        const count = await fetchUnreadNotificationCountApi(subscriberConfig.subscriberId)
-        if (!cancelled) setServerUnreadCount(count)
-      } catch {
-        if (!cancelled) setServerUnreadCount(null)
-      }
-    }
-
-    void refreshUnreadCount()
-    const intervalId = window.setInterval(() => {
-      void refreshUnreadCount()
-    }, 1500)
-
-    return () => {
-      cancelled = true
-      window.clearInterval(intervalId)
-    }
-  }, [subscriberConfig?.subscriberId])
-
   const configured = Boolean(APP_ID && subscriberConfig)
 
   if (!configured || hasAuthError) {
@@ -132,8 +100,7 @@ export function NovuInboxBell() {
       }}
       renderBell={(unreadCount) => (
         (() => {
-          const effectiveUnread =
-            serverUnreadCount !== null ? serverUnreadCount : getUnreadCount(unreadCount)
+          const effectiveUnread = getUnreadCount(unreadCount)
 
           return (
             <Button
