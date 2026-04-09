@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { CreateTaskModal } from '@/components/tasks/CreateTaskModal'
 import { TaskListView } from '@/components/tasks/TaskListView'
@@ -11,7 +12,9 @@ import { useTaskStore } from '@/store/task-store'
 export function DashboardPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [createSession, setCreateSession] = useState(0)
+  const [searchParams] = useSearchParams()
   const tasks = useTaskStore((s) => s.tasks)
+  const searchText = (searchParams.get('q') ?? '').trim().toLowerCase()
 
   function openCreateModal() {
     setCreateSession((s) => s + 1)
@@ -26,6 +29,15 @@ export function DashboardPage() {
     ).length
     return { activeCount: active, dueSoonCount: dueSoon }
   }, [tasks])
+
+  const visibleTasks = useMemo(() => {
+    if (!searchText) return tasks
+    return tasks.filter((task) => {
+      const assigneeNames = (task.assignees ?? []).map((u) => u.name.toLowerCase()).join(' ')
+      const haystack = `${task.title} ${task.description} ${assigneeNames}`.toLowerCase()
+      return haystack.includes(searchText)
+    })
+  }, [searchText, tasks])
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -103,7 +115,16 @@ export function DashboardPage() {
           </p>
         </div>
 
-        <TaskListView onCreateClick={openCreateModal} />
+        <TaskListView
+          onCreateClick={openCreateModal}
+          tasks={visibleTasks}
+          emptyTitle={searchText ? 'No tasks match your search' : 'No tasks yet'}
+          emptyDescription={
+            searchText
+              ? 'Try another keyword or open Tasks page for advanced filters.'
+              : 'Create your first task to see it appear here with motion.'
+          }
+        />
       </section>
     </div>
   )

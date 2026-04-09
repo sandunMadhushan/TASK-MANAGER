@@ -4,17 +4,27 @@ import { AlertCircle, LayoutList, Plus, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { useTaskStore } from '@/store/task-store'
+import type { Task } from '@/types/task'
 
 type TaskListViewProps = {
   onCreateClick: () => void
+  tasks?: Task[]
+  emptyTitle?: string
+  emptyDescription?: string
 }
 
-export function TaskListView({ onCreateClick }: TaskListViewProps) {
-  const tasks = useTaskStore((s) => s.tasks)
+export function TaskListView({
+  onCreateClick,
+  tasks,
+  emptyTitle = 'No tasks yet',
+  emptyDescription = 'Create your first task to see it appear here with motion.',
+}: TaskListViewProps) {
+  const storeTasks = useTaskStore((s) => s.tasks)
   const isLoading = useTaskStore((s) => s.isLoading)
   const error = useTaskStore((s) => s.error)
   const fetchTasks = useTaskStore((s) => s.fetchTasks)
   const reduceMotion = useReducedMotion()
+  const renderedTasks = tasks ?? storeTasks
 
   if (isLoading) {
     return (
@@ -68,7 +78,7 @@ export function TaskListView({ onCreateClick }: TaskListViewProps) {
     )
   }
 
-  if (tasks.length === 0) {
+  if (renderedTasks.length === 0) {
     return (
       <motion.div
         className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/4 px-5 py-14 text-center backdrop-blur-md sm:px-6 sm:py-16"
@@ -79,11 +89,9 @@ export function TaskListView({ onCreateClick }: TaskListViewProps) {
         <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-linear-to-br from-violet-500/20 to-fuchsia-500/15 ring-1 ring-white/10">
           <LayoutList className="size-7 text-muted-foreground" aria-hidden />
         </div>
-        <h3 className="font-heading text-lg font-semibold text-foreground">
-          No tasks yet
-        </h3>
+        <h3 className="font-heading text-lg font-semibold text-foreground">{emptyTitle}</h3>
         <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-          Create your first task to see it appear here with motion.
+          {emptyDescription}
         </p>
         <Button
           className="mt-6 min-w-28 shadow-lg shadow-primary/20 focus-visible:ring-primary/40"
@@ -100,7 +108,7 @@ export function TaskListView({ onCreateClick }: TaskListViewProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       <AnimatePresence mode="popLayout">
-        {tasks.map((task, index) => (
+        {renderedTasks.map((task, index) => (
           <TaskCard key={task.id} index={index} task={task} />
         ))}
       </AnimatePresence>

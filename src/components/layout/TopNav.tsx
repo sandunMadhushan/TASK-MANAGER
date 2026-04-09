@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion'
 import { Menu, Search } from 'lucide-react'
+import { useMemo } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { NovuInboxBell } from '@/components/notifications/NovuInboxBell'
@@ -10,6 +12,23 @@ type TopNavProps = {
 }
 
 export function TopNav({ onMenuClick }: TopNavProps) {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const searchText = useMemo(() => searchParams.get('q') ?? '', [searchParams])
+
+  function updateSearchQuery(value: string) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (value.trim()) {
+        next.set('q', value)
+      } else {
+        next.delete('q')
+      }
+      return next
+    })
+  }
+
   return (
     <motion.header
       animate={{ opacity: 1, y: 0 }}
@@ -39,6 +58,16 @@ export function TopNav({ onMenuClick }: TopNavProps) {
             className="h-10 w-full max-w-xl rounded-xl border border-white/10 bg-white/6 pl-10 pr-3 text-sm text-foreground outline-none ring-primary/30 transition-[box-shadow,border-color] placeholder:text-muted-foreground focus:border-primary/40 focus:ring-4"
             placeholder="Search tasks, people, or tags…"
             type="search"
+            value={searchText}
+            onChange={(event) => updateSearchQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter') return
+              if (location.pathname !== '/tasks') {
+                navigate(
+                  `/tasks${searchText.trim() ? `?q=${encodeURIComponent(searchText.trim())}` : ''}`
+                )
+              }
+            }}
           />
         </div>
 
