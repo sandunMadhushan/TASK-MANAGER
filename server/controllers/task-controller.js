@@ -46,7 +46,7 @@ export async function createTaskHandler(req, res, next) {
     })
 
     const assignedUsers = getAssignedUsers(task)
-    await notifyTaskAssigned(task, assignedUsers)
+    await runNotificationSafely(() => notifyTaskAssigned(task, assignedUsers))
 
     return res.status(201).json(task)
   } catch (error) {
@@ -79,7 +79,7 @@ export async function updateTaskStatusHandler(req, res, next) {
     }
 
     if (previousTask && previousTask.status !== 'done' && task.status === 'done') {
-      await notifyTaskCompleted(task, getAssignedUsers(task))
+      await runNotificationSafely(() => notifyTaskCompleted(task, getAssignedUsers(task)))
     }
 
     return res.status(200).json(task)
@@ -132,11 +132,11 @@ export async function updateTaskHandler(req, res, next) {
       const previousIds = new Set(getAssignedUsers(previousTask).map((u) => u.id))
       const newlyAssigned = getAssignedUsers(task).filter((u) => !previousIds.has(u.id))
       if (newlyAssigned.length > 0) {
-        await notifyTaskAssigned(task, newlyAssigned)
+        await runNotificationSafely(() => notifyTaskAssigned(task, newlyAssigned))
       }
 
       if (previousTask.status !== 'done' && task.status === 'done') {
-        await notifyTaskCompleted(task, getAssignedUsers(task))
+        await runNotificationSafely(() => notifyTaskCompleted(task, getAssignedUsers(task)))
       }
     }
 
@@ -162,6 +162,14 @@ function getAssignedUsers(task) {
   return task.assignedTo.filter(
     (user) => user && typeof user === 'object' && user.id && user.email
   )
+}
+
+async function runNotificationSafely(notify) {
+  try {
+    await notify()
+  } catch (error) {
+    console.warn('Notification dispatch failed:', error?.message ?? error)
+  }
 }
 
 export async function deleteTaskHandler(req, res, next) {

@@ -33,12 +33,19 @@ type TaskCardProps = {
 export function TaskCard({ task, index }: TaskCardProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [editSession, setEditSession] = useState(0)
+  const users = useTaskStore((s) => s.users)
   const deleteTask = useTaskStore((s) => s.deleteTask)
   const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus)
   const updatingTaskId = useTaskStore((s) => s.updatingTaskId)
   const deletingTaskId = useTaskStore((s) => s.deletingTaskId)
   const isUpdating = updatingTaskId === task.id
   const isDeleting = deletingTaskId === task.id
+  const resolvedAssignees =
+    task.assignees && task.assignees.length > 0
+      ? task.assignees
+      : (task.assignedToIds ?? [])
+          .map((id) => users.find((user) => user.id === id))
+          .filter((user): user is NonNullable<typeof user> => Boolean(user))
 
   function openEdit() {
     setEditSession((s) => s + 1)
@@ -86,8 +93,8 @@ export function TaskCard({ task, index }: TaskCardProps) {
               <p className="pt-1 text-[11px] text-muted-foreground">
                 Assigned to:{' '}
                 <span className="font-medium text-foreground/90">
-                  {task.assignees?.length
-                    ? task.assignees.map((u) => u.name).join(', ')
+                  {resolvedAssignees.length
+                    ? resolvedAssignees.map((u) => u.name).join(', ')
                     : 'Unassigned'}
                 </span>
               </p>
@@ -129,8 +136,8 @@ export function TaskCard({ task, index }: TaskCardProps) {
 
         <CardFooter className="justify-between gap-2 border-white/10 bg-white/3">
           <div className="text-xs text-muted-foreground">
-            {task.assignees?.length
-              ? task.assignees.map((u) => u.email).join(', ')
+            {resolvedAssignees.length
+              ? resolvedAssignees.map((u) => u.email).join(', ')
               : 'No assignee email'}
           </div>
           <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
