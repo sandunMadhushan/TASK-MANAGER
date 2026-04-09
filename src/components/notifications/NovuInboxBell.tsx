@@ -1,8 +1,9 @@
 import { Inbox } from '@novu/react'
 import { Bell } from 'lucide-react'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { fetchNovuSubscriberAuthApi } from '@/services/task-api'
 import { useTaskStore } from '@/store/task-store'
 
 const APP_ID = import.meta.env.VITE_NOVU_APPLICATION_IDENTIFIER as string | undefined
@@ -12,10 +13,16 @@ const RAW_SOCKET_URL =
   (import.meta.env.VITE_NOVU_SOCKET_URL as string | undefined) ?? 'ws://localhost:3002'
 const SOCKET_URL = normalizeSocketUrl(RAW_SOCKET_URL)
 
+type SubscriberConfig = {
+  subscriberId: string
+  subscriberHash?: string
+}
+
 export function NovuInboxBell() {
   const users = useTaskStore((s) => s.users)
+  const [subscriberConfig, setSubscriberConfig] = useState<SubscriberConfig | null>(null)
 
-  const subscriber = useMemo(() => {
+  const currentUserId = useMemo(() => {
     if (users.length === 0) return null
     const preferred =
       users.find((user) => user.email.toLowerCase() === 'alex@company.com') ??
@@ -23,7 +30,38 @@ export function NovuInboxBell() {
     return (preferred ?? users[0]).id
   }, [users])
 
-  const configured = Boolean(APP_ID && subscriber)
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadSubscriberAuth() {
+      if (!currentUserId) {
+        setSubscriberConfig(null)
+        return
+      }
+
+      try {
+        const auth = await fetchNovuSubscriberAuthApi(currentUserId)
+        if (cancelled) return
+        setSubscriberConfig(
+          auth.subscriberHash
+            ? { subscriberId: auth.subscriberId, subscriberHash: auth.subscriberHash }
+            : { subscriberId: auth.subscriberId }
+        )
+      } catch {
+        // Fallback without hash in case auth endpoint is temporarily unavailable.
+        if (cancelled) return
+        setSubscriberConfig({ subscriberId: currentUserId })
+      }
+    }
+
+    void loadSubscriberAuth()
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentUserId])
+
+  const configured = Boolean(APP_ID && subscriberConfig)
 
   if (!configured) {
     return (
@@ -43,7 +81,7 @@ export function NovuInboxBell() {
   return (
     <Inbox
       applicationIdentifier={APP_ID!}
-      subscriber={subscriber!}
+      subscriber={subscriberConfig!}
       backendUrl={BACKEND_URL}
       socketUrl={SOCKET_URL}
       socketOptions={{ socketType: 'self-hosted' }}

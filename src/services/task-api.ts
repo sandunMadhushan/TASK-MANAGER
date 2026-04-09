@@ -162,3 +162,12 @@ export async function deleteTaskApi(taskId: string): Promise<void> {
 export async function fetchUsersApi(): Promise<User[]> {
   return request<User[]>('/users')
 }
+
+export type NovuSubscriberAuth = {
+  subscriberId: string
+  subscriberHash: string | null
+}
+
+export async function fetchNovuSubscriberAuthApi(userId: string): Promise<NovuSubscriberAuth> {
+  return request<NovuSubscriberAuth>(`/users/${userId}/novu-auth`)
+}
