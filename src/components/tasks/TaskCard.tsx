@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { CalendarDays, Loader2, Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -33,6 +33,7 @@ type TaskCardProps = {
 export function TaskCard({ task, index }: TaskCardProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [editSession, setEditSession] = useState(0)
+  const reduceMotion = useReducedMotion()
   const users = useTaskStore((s) => s.users)
   const deleteTask = useTaskStore((s) => s.deleteTask)
   const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus)
@@ -55,15 +56,15 @@ export function TaskCard({ task, index }: TaskCardProps) {
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96, filter: 'blur(4px)' }}
+      initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+      animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+      exit={reduceMotion ? undefined : { opacity: 0, scale: 0.96, filter: 'blur(4px)' }}
       transition={{
         delay: 0.04 * Math.min(index, 8),
-        duration: 0.38,
+        duration: reduceMotion ? 0 : 0.38,
         ease: [0.22, 1, 0.36, 1],
       }}
-      whileHover={{ y: -4 }}
+      whileHover={reduceMotion ? undefined : { y: -4 }}
     >
       <EditTaskModal
         key={`${task.id}-${editSession}`}
@@ -134,13 +135,13 @@ export function TaskCard({ task, index }: TaskCardProps) {
           </div>
         </CardContent>
 
-        <CardFooter className="justify-between gap-2 border-white/10 bg-white/3">
-          <div className="text-xs text-muted-foreground">
+        <CardFooter className="flex-wrap items-center justify-between gap-2 border-white/10 bg-white/3 sm:flex-nowrap">
+          <div className="order-2 line-clamp-1 w-full text-xs text-muted-foreground sm:order-1 sm:max-w-[42%]">
             {resolvedAssignees.length
               ? resolvedAssignees.map((u) => u.email).join(', ')
               : 'No assignee email'}
           </div>
-          <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="order-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground sm:order-2">
             {isUpdating || isDeleting ? (
               <>
                 <Loader2 className="size-3.5 animate-spin" aria-hidden />
@@ -150,28 +151,30 @@ export function TaskCard({ task, index }: TaskCardProps) {
               <span>Synced</span>
             )}
           </div>
-          <Button
-            aria-label={`Edit ${task.title}`}
-            size="sm"
-            variant="ghost"
-            type="button"
-            className="hover:bg-white/10"
-            disabled={isDeleting || isUpdating}
-            onClick={openEdit}
-          >
-            <Pencil className="size-4" />
-          </Button>
-          <Button
-            aria-label={`Delete ${task.title}`}
-            size="sm"
-            variant="ghost"
-            type="button"
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-            disabled={isDeleting || isUpdating}
-            onClick={() => void deleteTask(task.id)}
-          >
-            <Trash2 className="size-4" />
-          </Button>
+          <div className="order-1 ml-auto inline-flex items-center gap-1 sm:order-3">
+            <Button
+              aria-label={`Edit ${task.title}`}
+              size="sm"
+              variant="ghost"
+              type="button"
+              className="hover:bg-white/10 focus-visible:ring-primary/40"
+              disabled={isDeleting || isUpdating}
+              onClick={openEdit}
+            >
+              <Pencil className="size-4" />
+            </Button>
+            <Button
+              aria-label={`Delete ${task.title}`}
+              size="sm"
+              variant="ghost"
+              type="button"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive focus-visible:ring-destructive/35"
+              disabled={isDeleting || isUpdating}
+              onClick={() => void deleteTask(task.id)}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
         </CardFooter>
       </Card>
     </motion.div>

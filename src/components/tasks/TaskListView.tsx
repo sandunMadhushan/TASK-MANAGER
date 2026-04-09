@@ -1,5 +1,5 @@
-import { AnimatePresence, motion } from 'framer-motion'
-import { AlertCircle, LayoutList, Loader2, Plus, RefreshCw } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { AlertCircle, LayoutList, Plus, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { TaskCard } from '@/components/tasks/TaskCard'
@@ -14,16 +14,32 @@ export function TaskListView({ onCreateClick }: TaskListViewProps) {
   const isLoading = useTaskStore((s) => s.isLoading)
   const error = useTaskStore((s) => s.error)
   const fetchTasks = useTaskStore((s) => s.fetchTasks)
+  const reduceMotion = useReducedMotion()
 
   if (isLoading) {
     return (
       <motion.div
-        className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/4 px-6 py-16 text-center backdrop-blur-md"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+        initial={reduceMotion ? false : { opacity: 0 }}
+        animate={reduceMotion ? undefined : { opacity: 1 }}
       >
-        <Loader2 className="size-8 animate-spin text-primary" aria-hidden />
-        <p className="mt-3 text-sm text-muted-foreground">Loading tasks...</p>
+        {Array.from({ length: 6 }).map((_, idx) => (
+          <div
+            key={idx}
+            className="overflow-hidden rounded-2xl border border-white/10 bg-card/60 p-4 shadow-lg shadow-black/20 backdrop-blur-xl"
+            aria-hidden
+          >
+            <div className="h-4 w-20 animate-pulse rounded bg-white/10" />
+            <div className="mt-3 h-6 w-3/4 animate-pulse rounded bg-white/10" />
+            <div className="mt-2 h-4 w-full animate-pulse rounded bg-white/8" />
+            <div className="mt-1 h-4 w-5/6 animate-pulse rounded bg-white/8" />
+            <div className="mt-6 h-8 w-full animate-pulse rounded bg-white/10" />
+            <div className="mt-4 h-9 w-full animate-pulse rounded bg-white/10" />
+          </div>
+        ))}
+        <span className="sr-only" aria-live="polite">
+          Loading tasks
+        </span>
       </motion.div>
     )
   }
@@ -36,7 +52,9 @@ export function TaskListView({ onCreateClick }: TaskListViewProps) {
         animate={{ opacity: 1 }}
       >
         <AlertCircle className="size-8 text-destructive" aria-hidden />
-        <p className="mt-3 max-w-md text-sm text-destructive/90">{error}</p>
+        <p className="mt-3 max-w-md text-sm text-destructive/90" role="status" aria-live="polite">
+          {error}
+        </p>
         <Button
           className="mt-5"
           variant="secondary"
@@ -53,7 +71,7 @@ export function TaskListView({ onCreateClick }: TaskListViewProps) {
   if (tasks.length === 0) {
     return (
       <motion.div
-        className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/4 px-6 py-16 text-center backdrop-blur-md"
+        className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/4 px-5 py-14 text-center backdrop-blur-md sm:px-6 sm:py-16"
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
@@ -68,7 +86,7 @@ export function TaskListView({ onCreateClick }: TaskListViewProps) {
           Create your first task to see it appear here with motion.
         </p>
         <Button
-          className="mt-6 shadow-lg shadow-primary/20"
+          className="mt-6 min-w-28 shadow-lg shadow-primary/20 focus-visible:ring-primary/40"
           type="button"
           onClick={onCreateClick}
         >

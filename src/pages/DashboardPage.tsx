@@ -106,7 +106,7 @@ export function DashboardPage() {
             Your tasks
           </h2>
           <p className="text-xs text-muted-foreground">
-            Step 4 · API connected
+            Step 7 · UI polish in progress
           </p>
         </div>
 

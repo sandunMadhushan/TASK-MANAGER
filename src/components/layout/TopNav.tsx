@@ -17,7 +17,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
       initial={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="mx-auto flex max-w-7xl items-center gap-3">
+      <div className="mx-auto flex max-w-7xl items-center gap-2 sm:gap-3">
         <Button
           aria-label="Open navigation"
           className="md:hidden"
@@ -42,7 +42,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
           />
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <NovuInboxBell />
 
           <div className="hidden h-8 w-px bg-white/10 sm:block" />
@@ -52,7 +52,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
               <AvatarImage alt="" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Nexus" />
               <AvatarFallback className="text-xs">NX</AvatarFallback>
             </Avatar>
-            <div className="hidden leading-tight sm:block">
+            <div className="hidden leading-tight md:block">
               <p className="text-xs font-medium text-foreground">Alex Morgan</p>
               <p className="text-[11px] text-muted-foreground">Product</p>
             </div>
