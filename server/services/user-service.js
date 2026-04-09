@@ -25,6 +25,12 @@ export async function getUserById(userId) {
   return user ? user.toJSON() : null
 }
 
+export async function getUserByEmail(email) {
+  if (!email) return null
+  const user = await UserModel.findOne({ email: String(email).trim().toLowerCase() })
+  return user ? user.toJSON() : null
+}
+
 export async function getUsersByIds(userIds) {
   if (!Array.isArray(userIds) || userIds.length === 0) return []
   const users = await UserModel.find({ _id: { $in: userIds } })

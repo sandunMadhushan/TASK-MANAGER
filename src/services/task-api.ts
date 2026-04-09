@@ -5,6 +5,12 @@ const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.trim(
   ? (import.meta.env.VITE_API_URL as string).trim()
   : 'http://localhost:4000/api'
 
+let authTokenGetter: (() => string | null) | null = null
+
+export function setAuthTokenGetter(getter: (() => string | null) | null) {
+  authTokenGetter = getter
+}
+
 type TaskDto = {
   id: string
   title: string
@@ -53,11 +59,14 @@ function toDateInputValue(value: string): string {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const requestUrl = `${API_BASE_URL}${path}`
+  const token = authTokenGetter?.()
+  const headers = new Headers(init?.headers ?? {})
+  headers.set('Content-Type', 'application/json')
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
   const requestInit: RequestInit = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
+    headers,
     ...init,
   }
 
@@ -105,6 +114,29 @@ function delay(ms: number): Promise<void> {
 export async function fetchTasksApi(): Promise<Task[]> {
   const data = await request<TaskDto[]>('/tasks')
   return data.map(mapTaskDto)
+}
+
+export type AuthSession = {
+  accessToken: string
+  user: User
+}
+
+export async function loginApi(email: string): Promise<AuthSession> {
+  return request<AuthSession>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}
+
+export async function signupApi(input: { name: string; email: string }): Promise<AuthSession> {
+  return request<AuthSession>('/auth/signup', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function fetchMeApi(): Promise<User> {
+  return request<User>('/auth/me')
 }
 
 type CreateTaskInput = {

@@ -3,6 +3,8 @@ import express from 'express'
 import morgan from 'morgan'
 
 import { env } from './config/env.js'
+import { requireAuth } from './middleware/auth-middleware.js'
+import { authRouter } from './routes/auth-routes.js'
 import { notificationRouter } from './routes/notification-routes.js'
 import { taskRouter } from './routes/task-routes.js'
 import { userRouter } from './routes/user-routes.js'
@@ -21,6 +23,8 @@ app.get('/api/health', (_req, res) => {
   res.status(200).json({ status: 'ok' })
 })
 
+app.use('/api/auth', authRouter)
+app.use('/api', requireAuth)
 app.use('/api/tasks', taskRouter)
 app.use('/api/users', userRouter)
 app.use('/api/notifications', notificationRouter)

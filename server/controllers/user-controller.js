@@ -18,8 +18,12 @@ export async function getUsersHandler(_req, res, next) {
 export async function getNovuSubscriberAuthHandler(req, res, next) {
   try {
     const { userId } = req.params
+    const currentUserId = req.user?.id
     if (!userId) {
       return res.status(400).json({ message: 'Missing userId' })
+    }
+    if (!currentUserId || userId !== currentUserId) {
+      return res.status(403).json({ message: 'Forbidden' })
     }
 
     return res.status(200).json({

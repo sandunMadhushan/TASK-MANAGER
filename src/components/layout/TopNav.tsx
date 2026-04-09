@@ -6,13 +6,18 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { NovuInboxBell } from '@/components/notifications/NovuInboxBell'
 import { Button } from '@/components/ui/button'
+import { useAuthStore } from '@/store/auth-store'
 
 type TopNavProps = {
   onMenuClick: () => void
 }
 
 export function TopNav({ onMenuClick }: TopNavProps) {
+  const currentUser = useAuthStore((s) => s.currentUser)
+  const logout = useAuthStore((s) => s.logout)
   const [searchParams, setSearchParams] = useSearchParams()
+  const fallbackName = (currentUser?.name ?? 'User').slice(0, 2).toUpperCase()
+
   const location = useLocation()
   const navigate = useNavigate()
   const searchText = useMemo(() => searchParams.get('q') ?? '', [searchParams])
@@ -79,12 +84,15 @@ export function TopNav({ onMenuClick }: TopNavProps) {
           <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 py-1 pl-1 pr-2 backdrop-blur-md">
             <Avatar className="size-8 ring-2 ring-primary/30">
               <AvatarImage alt="" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Nexus" />
-              <AvatarFallback className="text-xs">NX</AvatarFallback>
+              <AvatarFallback className="text-xs">{fallbackName}</AvatarFallback>
             </Avatar>
             <div className="hidden leading-tight md:block">
-              <p className="text-xs font-medium text-foreground">Alex Morgan</p>
-              <p className="text-[11px] text-muted-foreground">Product</p>
+              <p className="text-xs font-medium text-foreground">{currentUser?.name ?? 'User'}</p>
+              <p className="text-[11px] text-muted-foreground">{currentUser?.email ?? ''}</p>
             </div>
+            <Button size="sm" variant="ghost" type="button" onClick={logout}>
+              Logout
+            </Button>
           </div>
         </div>
       </div>

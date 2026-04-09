@@ -52,7 +52,8 @@ export function TasksPage() {
     setCreateOpen(true)
   }
 
-  function updateAssigneeFilter(value: string) {
+  function updateAssigneeFilter(value: string | null) {
+    if (!value) return
     if (value === 'all') {
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev)

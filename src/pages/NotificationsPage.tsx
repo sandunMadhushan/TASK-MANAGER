@@ -11,22 +11,16 @@ import {
   markAllNotificationsReadApi,
   type NotificationFeedItem,
 } from '@/services/task-api'
-import { useTaskStore } from '@/store/task-store'
+import { useAuthStore } from '@/store/auth-store'
 
 export function NotificationsPage() {
-  const users = useTaskStore((s) => s.users)
+  const currentUser = useAuthStore((s) => s.currentUser)
   const [isLoading, setIsLoading] = useState(false)
   const [isMarking, setIsMarking] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifications, setNotifications] = useState<NotificationFeedItem[]>([])
 
-  const subscriberId = useMemo(() => {
-    if (users.length === 0) return null
-    const preferred =
-      users.find((user) => user.email.toLowerCase() === 'alex@company.com') ??
-      users.find((user) => user.name.toLowerCase() === 'alex morgan')
-    return (preferred ?? users[0]).id
-  }, [users])
+  const subscriberId = useMemo(() => currentUser?.id ?? null, [currentUser])
 
   async function loadData() {
     if (!subscriberId) return

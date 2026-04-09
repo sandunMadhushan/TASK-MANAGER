@@ -13,12 +13,19 @@ export const env = {
   novuWorkflowTaskAssigned: process.env.NOVU_WORKFLOW_TASK_ASSIGNED ?? '',
   novuWorkflowTaskCompleted: process.env.NOVU_WORKFLOW_TASK_COMPLETED ?? '',
   novuWorkflowDeadlineNear: process.env.NOVU_WORKFLOW_DEADLINE_NEAR ?? '',
+  authJwtSecret: process.env.AUTH_JWT_SECRET ?? '',
+  authJwtExpiresIn: process.env.AUTH_JWT_EXPIRES_IN ?? '7d',
 }
 
 export function validateEnv() {
   if (!env.mongoUri) {
     throw new Error(
       'Missing MONGODB_URI. Create a .env file using .env.example and set a MongoDB connection string.'
+    )
+  }
+  if (!env.authJwtSecret) {
+    throw new Error(
+      'Missing AUTH_JWT_SECRET. Create a .env file using .env.example and set a secure JWT secret.'
     )
   }
 }

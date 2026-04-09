@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { fetchNovuSubscriberAuthApi } from '@/services/task-api'
-import { useTaskStore } from '@/store/task-store'
+import { useAuthStore } from '@/store/auth-store'
 
 const APP_ID = import.meta.env.VITE_NOVU_APPLICATION_IDENTIFIER as string | undefined
 const BACKEND_URL =
@@ -19,17 +19,10 @@ type SubscriberConfig = {
 }
 
 export function NovuInboxBell() {
-  const users = useTaskStore((s) => s.users)
+  const currentUser = useAuthStore((s) => s.currentUser)
   const [subscriberConfig, setSubscriberConfig] = useState<SubscriberConfig | null>(null)
   const [hasAuthError, setHasAuthError] = useState(false)
-
-  const currentUserId = useMemo(() => {
-    if (users.length === 0) return null
-    const preferred =
-      users.find((user) => user.email.toLowerCase() === 'alex@company.com') ??
-      users.find((user) => user.name.toLowerCase() === 'alex morgan')
-    return (preferred ?? users[0]).id
-  }, [users])
+  const currentUserId = useMemo(() => currentUser?.id ?? null, [currentUser])
 
   useEffect(() => {
     let cancelled = false

@@ -24,8 +24,12 @@ export async function sendDeadlineRemindersHandler(req, res, next) {
 export async function getUnreadCountHandler(req, res, next) {
   try {
     const { subscriberId } = req.params
+    const currentUserId = req.user?.id
     if (!subscriberId) {
       return res.status(400).json({ message: 'Missing subscriberId' })
+    }
+    if (!currentUserId || subscriberId !== currentUserId) {
+      return res.status(403).json({ message: 'Forbidden' })
     }
 
     const unreadCount = await getUnreadNotificationCount(subscriberId)
@@ -38,8 +42,12 @@ export async function getUnreadCountHandler(req, res, next) {
 export async function getNotificationFeedHandler(req, res, next) {
   try {
     const { subscriberId } = req.params
+    const currentUserId = req.user?.id
     if (!subscriberId) {
       return res.status(400).json({ message: 'Missing subscriberId' })
+    }
+    if (!currentUserId || subscriberId !== currentUserId) {
+      return res.status(403).json({ message: 'Forbidden' })
     }
     const limitRaw = Number(req.query?.limit ?? 20)
     const limit = Number.isFinite(limitRaw) ? limitRaw : 20
@@ -55,8 +63,12 @@ export async function getNotificationFeedHandler(req, res, next) {
 export async function markAllReadHandler(req, res, next) {
   try {
     const { subscriberId } = req.params
+    const currentUserId = req.user?.id
     if (!subscriberId) {
       return res.status(400).json({ message: 'Missing subscriberId' })
+    }
+    if (!currentUserId || subscriberId !== currentUserId) {
+      return res.status(403).json({ message: 'Forbidden' })
     }
     const result = await markAllNotificationsRead(subscriberId)
     return res.status(200).json({ subscriberId, ...result })
