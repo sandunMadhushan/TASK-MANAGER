@@ -1,11 +1,16 @@
 import {
   createTask,
   deleteTask,
+  getTaskById,
   getTasks,
   updateTask,
   updateTaskStatus,
 } from '../services/task-service.js'
 import { getUsersByIds } from '../services/user-service.js'
+import {
+  notifyTaskAssigned,
+  notifyTaskCompleted,
+} from '../services/notification-service.js'
 
 const statusValues = new Set(['todo', 'in-progress', 'done'])
 
@@ -40,6 +45,9 @@ export async function createTaskHandler(req, res, next) {
       dueDate,
     })
 
+    const assignedUsers = getAssignedUsers(task)
+    await notifyTaskAssigned(task, assignedUsers)
+
     return res.status(201).json(task)
   } catch (error) {
     return next(error)
@@ -64,9 +72,14 @@ export async function updateTaskStatusHandler(req, res, next) {
       return res.status(400).json({ message: 'status is invalid' })
     }
 
+    const previousTask = await getTaskById(taskId)
     const task = await updateTaskStatus(taskId, status)
     if (!task) {
       return res.status(404).json({ message: 'Task not found' })
+    }
+
+    if (previousTask && previousTask.status !== 'done' && task.status === 'done') {
+      await notifyTaskCompleted(task, getAssignedUsers(task))
     }
 
     return res.status(200).json(task)
@@ -101,6 +114,8 @@ export async function updateTaskHandler(req, res, next) {
       }
     }
 
+    const previousTask = await getTaskById(taskId)
+
     const task = await updateTask(taskId, {
       title,
       description,
@@ -112,6 +127,19 @@ export async function updateTaskHandler(req, res, next) {
     if (!task) {
       return res.status(404).json({ message: 'Task not found' })
     }
+
+    if (previousTask) {
+      const previousIds = new Set(getAssignedUsers(previousTask).map((u) => u.id))
+      const newlyAssigned = getAssignedUsers(task).filter((u) => !previousIds.has(u.id))
+      if (newlyAssigned.length > 0) {
+        await notifyTaskAssigned(task, newlyAssigned)
+      }
+
+      if (previousTask.status !== 'done' && task.status === 'done') {
+        await notifyTaskCompleted(task, getAssignedUsers(task))
+      }
+    }
+
     return res.status(200).json(task)
   } catch (error) {
     return next(error)
@@ -127,6 +155,13 @@ function normalizeAssigneeIds(value) {
     return [value]
   }
   return []
+}
+
+function getAssignedUsers(task) {
+  if (!task?.assignedTo || !Array.isArray(task.assignedTo)) return []
+  return task.assignedTo.filter(
+    (user) => user && typeof user === 'object' && user.id && user.email
+  )
 }
 
 export async function deleteTaskHandler(req, res, next) {

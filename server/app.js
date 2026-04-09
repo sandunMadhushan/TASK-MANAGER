@@ -3,6 +3,7 @@ import express from 'express'
 import morgan from 'morgan'
 
 import { env } from './config/env.js'
+import { notificationRouter } from './routes/notification-routes.js'
 import { taskRouter } from './routes/task-routes.js'
 import { userRouter } from './routes/user-routes.js'
 
@@ -22,6 +23,7 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/tasks', taskRouter)
 app.use('/api/users', userRouter)
+app.use('/api/notifications', notificationRouter)
 
 app.use((req, res) => {
   res.status(404).json({ message: `Route not found: ${req.method} ${req.path}` })

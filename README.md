@@ -43,10 +43,10 @@ Non-goals for early steps: shipping production auth or APIs before their dedicat
 | Step 3 — Backend setup | **Done** | Express API in `server/`, MongoDB config, Mongoose `TaskModel`, create/list/update-status/delete routes. |
 | Step 4 — Connect frontend ↔ API | **Done** | Frontend now uses backend APIs for list/create/edit/status update/delete with loading + error states. |
 | Step 5 — Users & assignment | **Done** | Added `User` model + `/api/users`; task assignment validates user IDs; UI select + assignee display. |
-| Step 6 — Novu integration | Not started | Triggers: assigned, completed, deadline near. |
+| Step 6 — Novu integration | **Done** | Novu SDK integrated with assignment, completion, and deadline-reminder triggers. |
 | Step 7 — UI polish | Not started | Micro-interactions, skeletons, empty states, responsiveness. |
 
-**Last README update:** 2026-04-09 (Steps 1–5 complete).
+**Last README update:** 2026-04-09 (Steps 1-6 complete).
 
 ---
 
@@ -91,11 +91,11 @@ Use this as the single checklist for planning and for updating the [Current stat
 - [x] Assign task to user; persist `assignedTo`
 - [x] Show assignee on task cards and create-task form
 
-### Step 6 — Novu integration
+### Step 6 — Novu integration *(complete)*
 
-- [ ] Novu SDK on server; environment config for self-hosted instance
-- [ ] Subscribers: `subscriberId` + email (or project convention)
-- [ ] Triggers: task assigned, task completed, deadline approaching
+- [x] Novu SDK on server (`@novu/api`) + self-hosted base URL support
+- [x] Subscribers use `subscriberId=user.id` and `email=user.email`
+- [x] Triggers: task assigned, task completed, deadline approaching
 
 ### Step 7 — Polish
 
@@ -253,7 +253,7 @@ npm run preview   # optional local preview of dist/
 
 ---
 
-## Backend API (Step 3-5)
+## Backend API (Step 3-6)
 
 Base URL: `http://localhost:4000/api`
 
@@ -266,6 +266,7 @@ Base URL: `http://localhost:4000/api`
 | `PATCH` | `/tasks/:taskId/status` | Update task status |
 | `DELETE` | `/tasks/:taskId` | Delete a task |
 | `GET` | `/users` | List assignable users |
+| `POST` | `/notifications/deadline-reminders` | Trigger deadline-near reminder job |
 
 Create payload:
 
@@ -309,6 +310,9 @@ Status update payload:
 | `PORT` | Step 3+ | API server port |
 | `NOVU_API_KEY` | Step 6 | Novu secret for server triggers |
 | `NOVU_BACKEND_URL` | Step 6 | Self-hosted Novu API URL |
+| `NOVU_WORKFLOW_TASK_ASSIGNED` | Step 6 | Workflow ID for assignment notifications |
+| `NOVU_WORKFLOW_TASK_COMPLETED` | Step 6 | Workflow ID for completion notifications |
+| `NOVU_WORKFLOW_DEADLINE_NEAR` | Step 6 | Workflow ID for deadline reminder notifications |
 | `VITE_API_URL` | Step 4+ | Frontend base URL for REST calls |
 
 Add a `.env.example` at the repo root when you introduce environment variables, and describe each variable in one line here.

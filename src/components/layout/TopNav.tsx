@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion'
-import { Bell, Menu, Search } from 'lucide-react'
+import { Menu, Search } from 'lucide-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { NovuInboxBell } from '@/components/notifications/NovuInboxBell'
 import { Button } from '@/components/ui/button'
 
 type TopNavProps = {
@@ -42,16 +43,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <Button
-            aria-label="Notifications"
-            className="relative hidden sm:inline-flex"
-            size="icon-sm"
-            variant="ghost"
-            type="button"
-          >
-            <Bell className="size-[18px]" />
-            <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary shadow-[0_0_12px_rgba(167,139,250,0.9)]" />
-          </Button>
+          <NovuInboxBell />
 
           <div className="hidden h-8 w-px bg-white/10 sm:block" />
 

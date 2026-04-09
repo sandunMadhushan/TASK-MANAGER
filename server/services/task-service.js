@@ -1,5 +1,10 @@
 import { TaskModel } from '../models/task-model.js'
 
+export async function getTaskById(taskId) {
+  const task = await TaskModel.findById(taskId).populate('assignedTo')
+  return task ? task.toJSON() : null
+}
+
 export async function createTask(payload) {
   const task = await TaskModel.create({
     title: payload.title,
