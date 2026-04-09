@@ -134,7 +134,7 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
                   <SelectTrigger id="task-status" className="w-full min-w-0">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent side="bottom" sideOffset={8} align="start" alignItemWithTrigger={false}>
                     <SelectItem value="todo">To do</SelectItem>
                     <SelectItem value="in-progress">In progress</SelectItem>
                     <SelectItem value="done">Done</SelectItem>

@@ -140,7 +140,7 @@ export function TasksPage() {
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent side="bottom" sideOffset={8} align="start" alignItemWithTrigger={false}>
                 <SelectItem value="all">All</SelectItem>
                 <SelectItem value="todo">To do</SelectItem>
                 <SelectItem value="in-progress">In progress</SelectItem>
@@ -158,7 +158,7 @@ export function TasksPage() {
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent side="bottom" sideOffset={8} align="start" alignItemWithTrigger={false}>
                 <SelectItem value="all">All</SelectItem>
                 {users.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
@@ -189,7 +189,7 @@ export function TasksPage() {
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent side="bottom" sideOffset={8} align="start" alignItemWithTrigger={false}>
                 <SelectItem value="due-asc">Due soonest</SelectItem>
                 <SelectItem value="due-desc">Due latest</SelectItem>
                 <SelectItem value="newest">Newest</SelectItem>
