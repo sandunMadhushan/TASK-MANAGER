@@ -5,11 +5,11 @@ import {
   LayoutDashboard,
   Settings2,
   Sparkles,
+  UserCircle2,
   Users,
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
-import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
@@ -88,18 +88,42 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
       <div className="mt-auto space-y-3 px-4 pt-4">
         <div className="rounded-2xl border border-white/10 bg-white/4 p-4 backdrop-blur-md">
-          <p className="text-xs font-medium text-foreground">Pro tip</p>
+          <p className="text-xs font-medium text-foreground">Quick actions</p>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Drag cards to reorder when we wire up the board in a later step.
+            Jump to common actions for your workspace.
           </p>
-          <Button
-            className="mt-3 w-full shadow-lg shadow-primary/20"
-            size="sm"
-            variant="secondary"
-            type="button"
-          >
-            Explore
-          </Button>
+          <div className="mt-3 space-y-2">
+            <NavLink
+              to="/tasks"
+              onClick={onNavigate}
+              className={cn(
+                'inline-flex w-full items-center gap-2 rounded-lg border border-white/10 bg-white/6 px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-white/10'
+              )}
+            >
+              <CheckSquare className="size-3.5" />
+              New task
+            </NavLink>
+            <NavLink
+              to="/team"
+              onClick={onNavigate}
+              className={cn(
+                'inline-flex w-full items-center gap-2 rounded-lg border border-white/10 bg-white/6 px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-white/10'
+              )}
+            >
+              <Users className="size-3.5" />
+              Invite user
+            </NavLink>
+            <NavLink
+              to="/profile"
+              onClick={onNavigate}
+              className={cn(
+                'inline-flex w-full items-center gap-2 rounded-lg border border-white/10 bg-white/6 px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-white/10'
+              )}
+            >
+              <UserCircle2 className="size-3.5" />
+              Profile
+            </NavLink>
+          </div>
         </div>
       </div>
     </div>
