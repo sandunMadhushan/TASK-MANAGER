@@ -8,4 +8,6 @@ export type Task = {
   /** Local date string `YYYY-MM-DD` (from `<input type="date" />`). */
   dueDate: string
   tag: string
+  assignedTo?: string | null
+  createdAt?: string
 }

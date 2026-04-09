@@ -1,84 +1,103 @@
 import { create } from 'zustand'
 
-import { todayIsoDate } from '@/lib/format-due-date'
+import {
+  createTaskApi,
+  deleteTaskApi,
+  fetchTasksApi,
+  updateTaskStatusApi,
+} from '@/services/task-api'
 import type { Task, TaskStatus } from '@/types/task'
 
 type TaskStore = {
   tasks: Task[]
-  addTask: (input: Omit<Task, 'id'>) => void
-  removeTask: (id: string) => void
-  updateTaskStatus: (id: string, status: TaskStatus) => void
+  isLoading: boolean
+  isCreating: boolean
+  updatingTaskId: string | null
+  deletingTaskId: string | null
+  error: string | null
+  fetchTasks: () => Promise<void>
+  addTask: (input: Omit<Task, 'id' | 'tag'>) => Promise<boolean>
+  updateTaskStatus: (id: string, status: TaskStatus) => Promise<void>
+  deleteTask: (id: string) => Promise<void>
 }
 
-const seedTasks: Task[] = [
-  {
-    id: 'seed-1',
-    title: 'Design system audit',
-    description:
-      'Review tokens, spacing, and motion across dashboard surfaces for consistency.',
-    status: 'in-progress',
-    dueDate: '2026-04-12',
-    tag: 'Design',
-  },
-  {
-    id: 'seed-2',
-    title: 'API contract for tasks',
-    description:
-      'Draft request/response shapes for create, list, and status transitions.',
-    status: 'todo',
-    dueDate: '2026-04-15',
-    tag: 'Backend',
-  },
-  {
-    id: 'seed-3',
-    title: 'Notification templates',
-    description:
-      'Map Novu workflows for assignment, completion, and deadline reminders.',
-    status: 'todo',
-    dueDate: '2026-04-18',
-    tag: 'Notifications',
-  },
-  {
-    id: 'seed-4',
-    title: 'Mobile navigation polish',
-    description:
-      'Tighten hit targets, springy drawer motion, and focus order for a11y.',
-    status: 'done',
-    dueDate: todayIsoDate(),
-    tag: 'Frontend',
-  },
-  {
-    id: 'seed-5',
-    title: 'Weekly stakeholder sync',
-    description:
-      'Share progress on task flows, assignments, and notification triggers.',
-    status: 'in-progress',
-    dueDate: '2026-04-10',
-    tag: 'Ops',
-  },
-  {
-    id: 'seed-6',
-    title: 'Empty & loading states',
-    description:
-      'Add skeleton rows and friendly copy for first-time project setup.',
-    status: 'todo',
-    dueDate: '2026-04-22',
-    tag: 'UX',
-  },
-]
-
 export const useTaskStore = create<TaskStore>((set) => ({
-  tasks: seedTasks,
-  addTask: (input) =>
-    set((s) => ({
-      tasks: [{ ...input, id: crypto.randomUUID() }, ...s.tasks],
-    })),
-  removeTask: (id) =>
-    set((s) => ({
-      tasks: s.tasks.filter((t) => t.id !== id),
-    })),
-  updateTaskStatus: (id, status) =>
-    set((s) => ({
-      tasks: s.tasks.map((t) => (t.id === id ? { ...t, status } : t)),
-    })),
+  tasks: [],
+  isLoading: false,
+  isCreating: false,
+  updatingTaskId: null,
+  deletingTaskId: null,
+  error: null,
+  fetchTasks: async () => {
+    set({ isLoading: true, error: null })
+    try {
+      const tasks = await fetchTasksApi()
+      set({ tasks, isLoading: false, error: null })
+    } catch (error) {
+      set({
+        isLoading: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unable to load tasks. Please try again.',
+      })
+    }
+  },
+  addTask: async (input) => {
+    set({ isCreating: true, error: null })
+    try {
+      const task = await createTaskApi(input)
+      set((s) => ({
+        tasks: [task, ...s.tasks],
+        isCreating: false,
+        error: null,
+      }))
+      return true
+    } catch (error) {
+      set({
+        isCreating: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unable to create task. Please try again.',
+      })
+      return false
+    }
+  },
+  updateTaskStatus: async (id, status) => {
+    set({ updatingTaskId: id, error: null })
+    try {
+      const updated = await updateTaskStatusApi(id, status)
+      set((s) => ({
+        tasks: s.tasks.map((t) => (t.id === id ? updated : t)),
+        updatingTaskId: null,
+      }))
+    } catch (error) {
+      set({
+        updatingTaskId: null,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unable to update status. Please try again.',
+      })
+    }
+  },
+  deleteTask: async (id) => {
+    set({ deletingTaskId: id, error: null })
+    try {
+      await deleteTaskApi(id)
+      set((s) => ({
+        tasks: s.tasks.filter((t) => t.id !== id),
+        deletingTaskId: null,
+      }))
+    } catch (error) {
+      set({
+        deletingTaskId: null,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unable to delete task. Please try again.',
+      })
+    }
+  },
 }))

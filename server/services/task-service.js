@@ -26,3 +26,8 @@ export async function updateTaskStatus(taskId, status) {
 
   return task ? task.toJSON() : null
 }
+
+export async function deleteTask(taskId) {
+  const deleted = await TaskModel.findByIdAndDelete(taskId)
+  return Boolean(deleted)
+}

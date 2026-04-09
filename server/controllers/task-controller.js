@@ -1,5 +1,6 @@
 import {
   createTask,
+  deleteTask,
   getTasks,
   updateTaskStatus,
 } from '../services/task-service.js'
@@ -60,6 +61,21 @@ export async function updateTaskStatusHandler(req, res, next) {
     }
 
     return res.status(200).json(task)
+  } catch (error) {
+    return next(error)
+  }
+}
+
+export async function deleteTaskHandler(req, res, next) {
+  try {
+    const { taskId } = req.params
+    const deleted = await deleteTask(taskId)
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Task not found' })
+    }
+
+    return res.status(200).json({ message: 'Task deleted' })
   } catch (error) {
     return next(error)
   }

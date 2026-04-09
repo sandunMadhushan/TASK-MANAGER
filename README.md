@@ -40,13 +40,13 @@ Non-goals for early steps: shipping production auth or APIs before their dedicat
 |-----------|--------|--------|
 | Step 1 — Frontend setup & UI foundation | **Done** | Vite + React + TS, Tailwind v4, ShadCN, Framer Motion, glass dashboard shell, dummy task cards. No backend or auth. |
 | Step 2 — Task UI (frontend only) | **Done** | `TaskCard`, `TaskListView`, `CreateTaskModal`; Zustand task store; add/remove/status animations; title validation. No API. |
-| Step 3 — Backend setup | **Done** | Express API in `server/`, MongoDB config, Mongoose `TaskModel`, create/list/update-status routes. |
-| Step 4 — Connect frontend ↔ API | Not started | Replace dummy data, loading and error handling. |
+| Step 3 — Backend setup | **Done** | Express API in `server/`, MongoDB config, Mongoose `TaskModel`, create/list/update-status/delete routes. |
+| Step 4 — Connect frontend ↔ API | **Done** | Frontend now uses backend APIs for list/create/status update/delete with loading + error states. |
 | Step 5 — Users & assignment | Not started | User model, assign tasks, show assignee in UI. |
 | Step 6 — Novu integration | Not started | Triggers: assigned, completed, deadline near. |
 | Step 7 — UI polish | Not started | Micro-interactions, skeletons, empty states, responsiveness. |
 
-**Last README update:** 2026-04-09 (Steps 1–3 complete).
+**Last README update:** 2026-04-09 (Steps 1–4 complete).
 
 ---
 
@@ -77,13 +77,13 @@ Use this as the single checklist for planning and for updating the [Current stat
 - [x] Express app + `server/config`, `server/controllers`, `server/models`, `server/routes`, `server/services`
 - [x] MongoDB connection through Mongoose (`server/config/db.js`)
 - [x] **Task** schema with `title`, `description`, `status`, `assignedTo`, `dueDate`, `createdAt`
-- [x] APIs: `POST /api/tasks`, `GET /api/tasks`, `PATCH /api/tasks/:taskId/status`
+- [x] APIs: `POST /api/tasks`, `GET /api/tasks`, `PATCH /api/tasks/:taskId/status`, `DELETE /api/tasks/:taskId`
 
 ### Step 4 — Connect frontend + backend
 
-- [ ] API client in `src/services/`
-- [ ] Replace dummy data with real requests
-- [ ] Loading and error states in UI
+- [x] API client in `src/services/` (`task-api.ts`)
+- [x] Replaced dummy/local seed list with real requests
+- [x] Added loading and error states (`TaskListView`, `CreateTaskModal`, status updates)
 
 ### Step 5 — Users + assignment
 
@@ -263,6 +263,7 @@ Base URL: `http://localhost:4000/api`
 | `GET` | `/tasks` | List tasks |
 | `POST` | `/tasks` | Create a task |
 | `PATCH` | `/tasks/:taskId/status` | Update task status |
+| `DELETE` | `/tasks/:taskId` | Delete a task |
 
 Create payload:
 

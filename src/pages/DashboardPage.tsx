@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { Plus } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { CreateTaskModal } from '@/components/tasks/CreateTaskModal'
 import { TaskListView } from '@/components/tasks/TaskListView'
@@ -12,11 +12,16 @@ export function DashboardPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [createSession, setCreateSession] = useState(0)
   const tasks = useTaskStore((s) => s.tasks)
+  const fetchTasks = useTaskStore((s) => s.fetchTasks)
 
   function openCreateModal() {
     setCreateSession((s) => s + 1)
     setCreateOpen(true)
   }
+
+  useEffect(() => {
+    void fetchTasks()
+  }, [fetchTasks])
 
   const { activeCount, dueSoonCount } = useMemo(() => {
     const active = tasks.filter((t) => t.status !== 'done').length
@@ -50,8 +55,8 @@ export function DashboardPage() {
               Good afternoon, Alex
             </h1>
             <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
-              Manage tasks in the browser with smooth add/remove animations.
-              Data is stored with Zustand until the API is wired in Step 4.
+              Manage tasks with smooth interactions and real backend sync.
+              Changes now persist to MongoDB through the Step 3 API.
             </p>
           </div>
           <motion.div
@@ -99,7 +104,7 @@ export function DashboardPage() {
             Your tasks
           </h2>
           <p className="text-xs text-muted-foreground">
-            Step 2 · local state only
+            Step 4 · API connected
           </p>
         </div>
 

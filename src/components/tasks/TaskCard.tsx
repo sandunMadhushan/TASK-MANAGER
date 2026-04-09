@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { CalendarDays, Trash2 } from 'lucide-react'
+import { CalendarDays, Loader2, Trash2 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -29,8 +29,12 @@ type TaskCardProps = {
 }
 
 export function TaskCard({ task, index }: TaskCardProps) {
-  const removeTask = useTaskStore((s) => s.removeTask)
+  const deleteTask = useTaskStore((s) => s.deleteTask)
   const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus)
+  const updatingTaskId = useTaskStore((s) => s.updatingTaskId)
+  const deletingTaskId = useTaskStore((s) => s.deletingTaskId)
+  const isUpdating = updatingTaskId === task.id
+  const isDeleting = deletingTaskId === task.id
 
   return (
     <motion.div
@@ -84,7 +88,11 @@ export function TaskCard({ task, index }: TaskCardProps) {
                 updateTaskStatus(task.id, value as TaskStatus)
               }
             >
-              <SelectTrigger className="h-8 w-full min-w-0" size="default">
+              <SelectTrigger
+                className="h-8 w-full min-w-0"
+                size="default"
+                disabled={isUpdating || isDeleting}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -107,13 +115,24 @@ export function TaskCard({ task, index }: TaskCardProps) {
               </div>
             ))}
           </div>
+          <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            {isUpdating || isDeleting ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                <span>{isDeleting ? 'Deleting...' : 'Saving...'}</span>
+              </>
+            ) : (
+              <span>Synced</span>
+            )}
+          </div>
           <Button
             aria-label={`Delete ${task.title}`}
             size="sm"
             variant="ghost"
             type="button"
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => removeTask(task.id)}
+            disabled={isDeleting || isUpdating}
+            onClick={() => void deleteTask(task.id)}
           >
             <Trash2 className="size-4" />
           </Button>

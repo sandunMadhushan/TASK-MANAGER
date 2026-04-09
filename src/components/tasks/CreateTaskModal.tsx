@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { Loader2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -35,15 +36,17 @@ type CreateTaskModalProps = {
 
 export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
   const addTask = useTaskStore((s) => s.addTask)
+  const isCreating = useTaskStore((s) => s.isCreating)
+  const error = useTaskStore((s) => s.error)
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState<TaskStatus>('todo')
   const [dueDate, setDueDate] = useState(todayIsoDate())
-  const [tag, setTag] = useState('')
+  const [assignedTo, setAssignedTo] = useState('')
   const [titleError, setTitleError] = useState('')
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     const trimmed = title.trim()
     if (!trimmed) {
@@ -51,14 +54,16 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
       return
     }
     setTitleError('')
-    addTask({
+    const created = await addTask({
       title: trimmed,
       description: description.trim(),
       status,
       dueDate,
-      tag: tag.trim() || 'General',
+      assignedTo: assignedTo.trim() || null,
     })
-    onOpenChange(false)
+    if (created) {
+      onOpenChange(false)
+    }
   }
 
   return (
@@ -75,11 +80,17 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
           <DialogHeader>
             <DialogTitle>Create task</DialogTitle>
             <DialogDescription>
-              Tasks are saved in memory only for this step — no server yet.
+              This creates a real task via the backend API.
             </DialogDescription>
           </DialogHeader>
 
           <form className="mt-2 space-y-4" onSubmit={handleSubmit}>
+            {error ? (
+              <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                {error}
+              </p>
+            ) : null}
+
             <Field data-invalid={!!titleError || undefined}>
               <FieldLabel htmlFor="task-title">Title</FieldLabel>
               <FieldContent>
@@ -143,13 +154,13 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="task-tag">Tag (optional)</FieldLabel>
+              <FieldLabel htmlFor="task-assigned">Assigned to (optional)</FieldLabel>
               <FieldContent>
                 <Input
-                  id="task-tag"
-                  placeholder="e.g. Backend"
-                  value={tag}
-                  onChange={(e) => setTag(e.target.value)}
+                  id="task-assigned"
+                  placeholder="e.g. alex@company.com"
+                  value={assignedTo}
+                  onChange={(e) => setAssignedTo(e.target.value)}
                 />
               </FieldContent>
             </Field>
@@ -158,11 +169,21 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
               <Button
                 type="button"
                 variant="outline"
+                disabled={isCreating}
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit">Create task</Button>
+              <Button type="submit" disabled={isCreating}>
+                {isCreating ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create task'
+                )}
+              </Button>
             </div>
           </form>
         </motion.div>

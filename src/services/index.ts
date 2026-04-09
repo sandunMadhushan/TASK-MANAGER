@@ -1,2 +1,6 @@
-/** API and notification clients will be added in later steps. */
-export {}
+export {
+  createTaskApi,
+  deleteTaskApi,
+  fetchTasksApi,
+  updateTaskStatusApi,
+} from '@/services/task-api'
