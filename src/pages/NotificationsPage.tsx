@@ -124,14 +124,33 @@ export function NotificationsPage() {
               {notifications.map((item) => (
                 <article
                   key={item.id}
-                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5"
+                  className={`rounded-xl border px-3 py-2.5 ${
+                    item.isRead
+                      ? 'border-white/10 bg-white/5'
+                      : 'border-violet-400/35 bg-violet-500/10 shadow-[0_0_0_1px_rgba(167,139,250,0.25)]'
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium text-foreground">{item.subject ?? 'Notification'}</p>
+                    <div className="flex min-w-0 items-start gap-2">
+                      {!item.isRead ? (
+                        <span
+                          className="mt-1.5 inline-block size-2 shrink-0 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(167,139,250,0.9)]"
+                          aria-label="Unread notification"
+                        />
+                      ) : null}
+                      <p className="text-sm font-medium text-foreground">
+                        {item.subject ?? 'Notification'}
+                      </p>
+                    </div>
                     <span className="text-[10px] text-muted-foreground">
                       {item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}
                     </span>
                   </div>
+                  {!item.isRead ? (
+                    <span className="mt-1 inline-flex rounded-md border border-violet-300/35 bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-medium text-violet-200">
+                      Unread
+                    </span>
+                  ) : null}
                   <p className="mt-1 text-xs text-muted-foreground">{item.body ?? ''}</p>
                 </article>
               ))}
