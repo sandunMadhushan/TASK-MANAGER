@@ -65,6 +65,10 @@ export function NovuInboxBell() {
   }, [currentUserId])
 
   const configured = Boolean(APP_ID && subscriberConfig)
+  const inboxSessionKey = useMemo(() => {
+    if (!subscriberConfig) return 'novu-inbox-anon'
+    return `novu-inbox-${subscriberConfig.subscriberId}-${subscriberConfig.subscriberHash ?? 'nohash'}`
+  }, [subscriberConfig])
 
   if (!configured || hasAuthError) {
     return (
@@ -83,6 +87,7 @@ export function NovuInboxBell() {
 
   return (
     <Inbox
+      key={inboxSessionKey}
       applicationIdentifier={APP_ID!}
       subscriber={subscriberConfig!.subscriberId}
       subscriberHash={subscriberConfig?.subscriberHash}
