@@ -198,6 +198,7 @@ export async function fetchUsersApi(): Promise<User[]> {
 type UserInput = {
   name: string
   email: string
+  avatarUrl?: string
 }
 
 export async function createUserApi(input: UserInput): Promise<User> {

@@ -69,6 +69,7 @@ export async function createUser(payload) {
   let user = await UserModel.create({
     name: payload.name,
     email: payload.email,
+    avatarUrl: payload.avatarUrl ?? '',
     workspaceId: payload.workspaceId,
   })
   if (!user.workspaceId) {
@@ -85,6 +86,7 @@ export async function updateUser(userId, payload, workspaceId) {
   const update = {}
   if (payload.name !== undefined) update.name = payload.name
   if (payload.email !== undefined) update.email = payload.email
+  if (payload.avatarUrl !== undefined) update.avatarUrl = payload.avatarUrl
   const query = { _id: userId }
   const workspace = normalizeWorkspaceId(workspaceId)
   if (workspace) {

@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EditTaskModal } from '@/components/tasks/EditTaskModal'
+import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage } from '@/components/ui/avatar'
 import {
   Card,
   CardContent,
@@ -109,6 +110,19 @@ export function TaskCard({ task, index }: TaskCardProps) {
                     : 'Unassigned'}
                 </span>
               </p>
+              {resolvedAssignees.length > 0 ? (
+                <AvatarGroup className="pt-1">
+                  {resolvedAssignees.slice(0, 3).map((assignee) => (
+                    <Avatar key={assignee.id} size="sm">
+                      <AvatarImage alt={assignee.name} src={assignee.avatarUrl} />
+                      <AvatarFallback>{assignee.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                  ))}
+                  {resolvedAssignees.length > 3 ? (
+                    <AvatarGroupCount>+{resolvedAssignees.length - 3}</AvatarGroupCount>
+                  ) : null}
+                </AvatarGroup>
+              ) : null}
             </div>
           </div>
         </CardHeader>

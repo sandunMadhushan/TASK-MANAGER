@@ -12,6 +12,7 @@ type AuthStore = {
   isSigningUp: boolean
   login: (email: string) => Promise<boolean>
   signup: (input: { name: string; email: string }) => Promise<boolean>
+  setCurrentUser: (user: User) => void
   bootstrap: () => Promise<void>
   logout: () => void
 }
@@ -53,6 +54,9 @@ export const useAuthStore = create<AuthStore>()(
           set({ isSigningUp: false })
           return false
         }
+      },
+      setCurrentUser: (user) => {
+        set({ currentUser: user })
       },
       bootstrap: async () => {
         const token = get().accessToken

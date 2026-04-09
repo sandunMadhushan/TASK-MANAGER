@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { Plus } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { CreateTaskModal } from '@/components/tasks/CreateTaskModal'
@@ -13,11 +13,25 @@ import { useTaskStore } from '@/store/task-store'
 export function DashboardPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [createSession, setCreateSession] = useState(0)
+  const [now, setNow] = useState(() => new Date())
   const [searchParams] = useSearchParams()
   const tasks = useTaskStore((s) => s.tasks)
   const currentUser = useAuthStore((s) => s.currentUser)
   const searchText = (searchParams.get('q') ?? '').trim().toLowerCase()
   const firstName = (currentUser?.name ?? 'there').split(' ')[0]
+  const greeting = useMemo(() => {
+    const hour = now.getHours()
+    if (hour < 12) return 'Good morning'
+    if (hour < 18) return 'Good afternoon'
+    return 'Good evening'
+  }, [now])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(new Date())
+    }, 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   function openCreateModal() {
     setCreateSession((s) => s + 1)
@@ -62,11 +76,10 @@ export function DashboardPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-2">
             <h1 className="font-heading text-3xl font-semibold tracking-tight text-balance md:text-4xl">
-              Good afternoon, {firstName}
+              {greeting}, {firstName}
             </h1>
             <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
-              Manage tasks with smooth interactions and real backend sync.
-              Changes now persist to MongoDB through the Step 3 API.
+              Stay focused on your workspace priorities, recent assignments, and upcoming due dates.
             </p>
           </div>
           <motion.div
@@ -114,7 +127,7 @@ export function DashboardPage() {
             Your tasks
           </h2>
           <p className="text-xs text-muted-foreground">
-            Step 7 · UI polish in progress
+            Showing tasks created by you or assigned to you
           </p>
         </div>
 

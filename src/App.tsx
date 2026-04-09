@@ -6,6 +6,7 @@ import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotificationsPage } from '@/pages/NotificationsPage'
+import { ProfilePage } from '@/pages/ProfilePage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { TasksPage } from '@/pages/TasksPage'
 import { TeamPage } from '@/pages/TeamPage'
@@ -38,6 +39,7 @@ function App() {
       '/tasks': 'Tasks',
       '/team': 'Team',
       '/notifications': 'Notifications',
+      '/profile': 'Profile',
       '/settings': 'Settings',
     }
     const section = pageTitleByPath[location.pathname] ?? 'Dashboard'
@@ -72,6 +74,7 @@ function App() {
                   <Route path="/tasks" element={<TasksPage />} />
                   <Route path="/team" element={<TeamPage />} />
                   <Route path="/notifications" element={<NotificationsPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>

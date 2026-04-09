@@ -9,10 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { createUserApi, deleteUserApi, updateUserApi } from '@/services/task-api'
+import { useAuthStore } from '@/store/auth-store'
 import { useTaskStore } from '@/store/task-store'
 
 export function TeamPage() {
+  const currentUser = useAuthStore((s) => s.currentUser)
   const users = useTaskStore((s) => s.users)
   const tasks = useTaskStore((s) => s.tasks)
   const fetchUsers = useTaskStore((s) => s.fetchUsers)
@@ -190,7 +193,18 @@ export function TeamPage() {
                   className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{user.name}</p>
+                    <p className="inline-flex items-center gap-2 truncate text-sm font-medium text-foreground">
+                      <Avatar size="sm">
+                        <AvatarImage alt={user.name} src={user.avatarUrl} />
+                        <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      {user.name}
+                      {currentUser?.id === user.id ? (
+                        <span className="ml-1.5 rounded-full border border-violet-300/35 bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-violet-200">
+                          You
+                        </span>
+                      ) : null}
+                    </p>
                     <p className="truncate text-xs text-muted-foreground">{user.email}</p>
                   </div>
                   <div className="inline-flex items-center gap-2">
@@ -260,8 +274,16 @@ export function TeamPage() {
             <Card className="border-white/10 bg-card/70 backdrop-blur-xl">
               <CardHeader className="pb-2">
                 <CardTitle className="inline-flex items-center gap-2 text-base">
-                  <Users className="size-4 text-primary" />
+                  <Avatar size="sm">
+                    <AvatarImage alt={user.name} src={user.avatarUrl} />
+                    <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
                   {user.name}
+                  {currentUser?.id === user.id ? (
+                    <span className="rounded-full border border-violet-300/35 bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-200">
+                      You
+                    </span>
+                  ) : null}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 pt-0 text-sm text-muted-foreground">

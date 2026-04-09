@@ -82,15 +82,25 @@ export function TopNav({ onMenuClick }: TopNavProps) {
           <div className="hidden h-8 w-px bg-white/10 sm:block" />
 
           <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 py-1 pl-1 pr-2 backdrop-blur-md">
-            <Avatar className="size-8 ring-2 ring-primary/30">
-              <AvatarImage alt="" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Nexus" />
-              <AvatarFallback className="text-xs">{fallbackName}</AvatarFallback>
-            </Avatar>
-            <div className="hidden leading-tight md:block">
-              <p className="text-xs font-medium text-foreground">{currentUser?.name ?? 'User'}</p>
-              <p className="text-[11px] text-muted-foreground">{currentUser?.email ?? ''}</p>
-            </div>
-            <Button size="sm" variant="ghost" type="button" onClick={logout}>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-auto cursor-pointer rounded-lg px-1.5 py-1"
+              onClick={() => navigate('/profile')}
+            >
+              <Avatar className="size-8 ring-2 ring-primary/30">
+                <AvatarImage
+                  alt={currentUser?.name ?? 'User avatar'}
+                  src={currentUser?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Nexus'}
+                />
+                <AvatarFallback className="text-xs">{fallbackName}</AvatarFallback>
+              </Avatar>
+              <div className="hidden leading-tight md:block">
+                <p className="text-xs font-medium text-foreground">{currentUser?.name ?? 'User'}</p>
+                <p className="text-[11px] text-muted-foreground">{currentUser?.email ?? ''}</p>
+              </div>
+            </Button>
+            <Button size="sm" variant="ghost" type="button" className="cursor-pointer" onClick={logout}>
               Logout
             </Button>
           </div>

@@ -17,6 +17,12 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       maxlength: 120,
     },
+    avatarUrl: {
+      type: String,
+      trim: true,
+      default: '',
+      maxlength: 3000000,
+    },
     workspaceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
