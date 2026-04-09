@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { DashboardPage } from '@/pages/DashboardPage'
@@ -12,11 +12,24 @@ import { useTaskStore } from '@/store/task-store'
 function App() {
   const fetchTasks = useTaskStore((s) => s.fetchTasks)
   const fetchUsers = useTaskStore((s) => s.fetchUsers)
+  const location = useLocation()
 
   useEffect(() => {
     void fetchTasks()
     void fetchUsers()
   }, [fetchTasks, fetchUsers])
+
+  useEffect(() => {
+    const pageTitleByPath: Record<string, string> = {
+      '/dashboard': 'Dashboard',
+      '/tasks': 'Tasks',
+      '/team': 'Team',
+      '/notifications': 'Notifications',
+      '/settings': 'Settings',
+    }
+    const section = pageTitleByPath[location.pathname] ?? 'Dashboard'
+    document.title = `${section} | Nexus Tasks`
+  }, [location.pathname])
 
   return (
     <DashboardLayout>
