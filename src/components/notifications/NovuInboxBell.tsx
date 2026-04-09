@@ -8,15 +8,19 @@ import { useTaskStore } from '@/store/task-store'
 const APP_ID = import.meta.env.VITE_NOVU_APPLICATION_IDENTIFIER as string | undefined
 const BACKEND_URL =
   (import.meta.env.VITE_NOVU_BACKEND_URL as string | undefined) ?? 'http://localhost:5000'
-const SOCKET_URL =
+const RAW_SOCKET_URL =
   (import.meta.env.VITE_NOVU_SOCKET_URL as string | undefined) ?? 'ws://localhost:3002'
+const SOCKET_URL = normalizeSocketUrl(RAW_SOCKET_URL)
 
 export function NovuInboxBell() {
   const users = useTaskStore((s) => s.users)
 
   const subscriber = useMemo(() => {
     if (users.length === 0) return null
-    return users[0].id
+    const preferred =
+      users.find((user) => user.email.toLowerCase() === 'alex@company.com') ??
+      users.find((user) => user.name.toLowerCase() === 'alex morgan')
+    return (preferred ?? users[0]).id
   }, [users])
 
   const configured = Boolean(APP_ID && subscriber)
@@ -42,6 +46,7 @@ export function NovuInboxBell() {
       subscriber={subscriber!}
       backendUrl={BACKEND_URL}
       socketUrl={SOCKET_URL}
+      socketOptions={{ socketType: 'self-hosted' }}
       placement="bottom-end"
       placementOffset={10}
       appearance={{
@@ -77,4 +82,10 @@ function hasUnread(value: unknown): boolean {
     if (typeof count === 'number') return count > 0
   }
   return false
+}
+
+function normalizeSocketUrl(value: string): string {
+  if (value.startsWith('ws://')) return value.replace('ws://', 'http://')
+  if (value.startsWith('wss://')) return value.replace('wss://', 'https://')
+  return value
 }
