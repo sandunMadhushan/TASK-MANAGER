@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { updateUserApi } from '@/services/task-api'
+import { changePasswordApi, updateUserApi } from '@/services/task-api'
 import { useAuthStore } from '@/store/auth-store'
 import { useTaskStore } from '@/store/task-store'
 
@@ -23,14 +23,20 @@ export function ProfilePage() {
   const [email, setEmail] = useState(currentUser?.email ?? '')
   const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatarUrl ?? '')
   const [isSaving, setIsSaving] = useState(false)
+  const [isPasswordSaving, setIsPasswordSaving] = useState(false)
   const [isProcessingAvatar, setIsProcessingAvatar] = useState(false)
   const [selectedAvatarFileName, setSelectedAvatarFileName] = useState('')
   const [cropEditorOpen, setCropEditorOpen] = useState(false)
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
   const [cropSourceImage, setCropSourceImage] = useState('')
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1.1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<CroppedArea | null>(null)
   const [formError, setFormError] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
 
   useEffect(() => {
     setName(currentUser?.name ?? '')
@@ -118,6 +124,39 @@ export function ProfilePage() {
     }
   }
 
+  async function handlePasswordSubmit(event: FormEvent) {
+    event.preventDefault()
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      setPasswordError('Fill all password fields.')
+      return
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('New passwords do not match.')
+      return
+    }
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters.')
+      return
+    }
+
+    setIsPasswordSaving(true)
+    setPasswordError('')
+    try {
+      await changePasswordApi({ currentPassword, newPassword })
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmNewPassword('')
+      setPasswordDialogOpen(false)
+      toast.success('Password updated')
+    } catch (error) {
+      const message = getPasswordUpdateErrorMessage(error)
+      setPasswordError(message)
+      toast.error('Password update failed', { description: message })
+    } finally {
+      setIsPasswordSaving(false)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <Dialog open={cropEditorOpen} onOpenChange={setCropEditorOpen}>
@@ -165,16 +204,65 @@ export function ProfilePage() {
           </div>
         </DialogContent>
       </Dialog>
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change password</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-3" onSubmit={handlePasswordSubmit}>
+            {passwordError ? (
+              <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                {passwordError}
+              </p>
+            ) : null}
+            <Input
+              type="password"
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+              placeholder="Current password"
+              aria-label="Current password"
+            />
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              placeholder="New password"
+              aria-label="New password"
+            />
+            <Input
+              type="password"
+              value={confirmNewPassword}
+              onChange={(event) => setConfirmNewPassword(event.target.value)}
+              placeholder="Confirm new password"
+              aria-label="Confirm new password"
+            />
+            <div className="flex justify-end gap-2 pt-1">
+              <Button type="button" variant="outline" onClick={() => setPasswordDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isPasswordSaving}>
+                {isPasswordSaving ? 'Updating...' : 'Update password'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <motion.div
         animate={{ opacity: 1, y: 0 }}
         initial={{ opacity: 0, y: 10 }}
         transition={{ duration: 0.3 }}
+        className="flex items-end justify-between gap-3"
       >
-        <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">Profile</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Manage your personal account details for this workspace.
-        </p>
+        <div>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">Profile</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage your personal account details for this workspace.
+          </p>
+        </div>
+        <Button type="button" variant="outline" onClick={() => setPasswordDialogOpen(true)}>
+          Change password
+        </Button>
       </motion.div>
 
       <Card className="border-white/10 bg-white/4 backdrop-blur-md">
@@ -288,6 +376,7 @@ export function ProfilePage() {
           </form>
         </CardContent>
       </Card>
+
     </div>
   )
 }
@@ -341,5 +430,21 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     image.onerror = reject
     image.src = src
   })
+}
+
+function getPasswordUpdateErrorMessage(error: unknown): string {
+  const fallback = 'Unable to update password. Please try again.'
+  if (!(error instanceof Error)) return fallback
+
+  const message = error.message.trim()
+  if (!message) return fallback
+
+  if (/failed to fetch/i.test(message)) {
+    return 'Could not reach the server. Please ensure the backend is running and try again.'
+  }
+  if (/current password is incorrect/i.test(message)) {
+    return 'Current password is incorrect.'
+  }
+  return message
 }
 

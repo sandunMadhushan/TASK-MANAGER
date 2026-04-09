@@ -13,8 +13,11 @@ export const env = {
   novuWorkflowTaskAssigned: process.env.NOVU_WORKFLOW_TASK_ASSIGNED ?? '',
   novuWorkflowTaskCompleted: process.env.NOVU_WORKFLOW_TASK_COMPLETED ?? '',
   novuWorkflowDeadlineNear: process.env.NOVU_WORKFLOW_DEADLINE_NEAR ?? '',
+  novuWorkflowPasswordReset: process.env.NOVU_WORKFLOW_PASSWORD_RESET ?? '',
   authJwtSecret: process.env.AUTH_JWT_SECRET ?? '',
   authJwtExpiresIn: process.env.AUTH_JWT_EXPIRES_IN ?? '7d',
+  authDefaultPassword: process.env.AUTH_DEFAULT_PASSWORD ?? 'Pass@12345',
+  authPasswordResetTokenMinutes: Number(process.env.AUTH_PASSWORD_RESET_TOKEN_MINUTES ?? 30),
 }
 
 export function validateEnv() {

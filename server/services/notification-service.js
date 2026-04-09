@@ -68,6 +68,15 @@ export async function notifyTaskCompleted(task, users) {
   })
 }
 
+export async function notifyPasswordReset(user, payload) {
+  if (!env.novuWorkflowPasswordReset || !canSend(env.novuWorkflowPasswordReset) || !user) return
+  await triggerForUsers({
+    workflowId: env.novuWorkflowPasswordReset,
+    users: [user],
+    payload,
+  })
+}
+
 export async function sendDeadlineNearReminders(hoursAhead = 24) {
   if (!env.novuWorkflowDeadlineNear || !canSend(env.novuWorkflowDeadlineNear)) {
     return { scanned: 0, triggered: 0 }

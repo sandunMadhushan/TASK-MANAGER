@@ -10,8 +10,8 @@ type AuthStore = {
   isBootstrapping: boolean
   isLoggingIn: boolean
   isSigningUp: boolean
-  login: (email: string) => Promise<boolean>
-  signup: (input: { name: string; email: string }) => Promise<boolean>
+  login: (input: { email: string; password: string }) => Promise<boolean>
+  signup: (input: { name: string; email: string; password: string }) => Promise<boolean>
   setCurrentUser: (user: User) => void
   bootstrap: () => Promise<void>
   logout: () => void
@@ -25,10 +25,10 @@ export const useAuthStore = create<AuthStore>()(
       isBootstrapping: true,
       isLoggingIn: false,
       isSigningUp: false,
-      login: async (email) => {
+      login: async (input) => {
         set({ isLoggingIn: true })
         try {
-          const session = await loginApi(email)
+          const session = await loginApi(input)
           set({
             accessToken: session.accessToken,
             currentUser: session.user,

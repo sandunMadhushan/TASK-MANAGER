@@ -121,14 +121,18 @@ export type AuthSession = {
   user: User
 }
 
-export async function loginApi(email: string): Promise<AuthSession> {
+export async function loginApi(input: { email: string; password: string }): Promise<AuthSession> {
   return request<AuthSession>('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email }),
+    body: JSON.stringify(input),
   })
 }
 
-export async function signupApi(input: { name: string; email: string }): Promise<AuthSession> {
+export async function signupApi(input: {
+  name: string
+  email: string
+  password: string
+}): Promise<AuthSession> {
   return request<AuthSession>('/auth/signup', {
     method: 'POST',
     body: JSON.stringify(input),
@@ -137,6 +141,33 @@ export async function signupApi(input: { name: string; email: string }): Promise
 
 export async function fetchMeApi(): Promise<User> {
   return request<User>('/auth/me')
+}
+
+export async function changePasswordApi(input: {
+  currentPassword: string
+  newPassword: string
+}): Promise<void> {
+  await request<{ message: string }>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function forgotPasswordApi(email: string): Promise<void> {
+  await request<{ message: string }>('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}
+
+export async function resetPasswordApi(input: {
+  token: string
+  newPassword: string
+}): Promise<void> {
+  await request<{ message: string }>('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
 }
 
 type CreateTaskInput = {

@@ -7,6 +7,7 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotificationsPage } from '@/pages/NotificationsPage'
 import { ProfilePage } from '@/pages/ProfilePage'
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { TasksPage } from '@/pages/TasksPage'
 import { TeamPage } from '@/pages/TeamPage'
@@ -60,6 +61,10 @@ function App() {
         <Route
           path="/login"
           element={currentUser ? <Navigate to="/dashboard" replace /> : <LoginPage />}
+        />
+        <Route
+          path="/reset-password"
+          element={currentUser ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />}
         />
         <Route
           path="/*"

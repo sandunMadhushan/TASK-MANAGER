@@ -1,4 +1,6 @@
 import { UserModel } from '../models/user-model.js'
+import { env } from '../config/env.js'
+import { hashPassword } from './password-service.js'
 import { unassignUserFromAllTasks } from './task-service.js'
 
 const defaultUsers = [
@@ -11,7 +13,13 @@ const defaultUsers = [
 export async function ensureDefaultUsers() {
   const count = await UserModel.countDocuments()
   if (count > 0) return
-  const inserted = await UserModel.insertMany(defaultUsers)
+  const passwordHash = await hashPassword(env.authDefaultPassword)
+  const inserted = await UserModel.insertMany(
+    defaultUsers.map((user) => ({
+      ...user,
+      passwordHash,
+    }))
+  )
   await Promise.all(
     inserted.map((user) =>
       UserModel.findByIdAndUpdate(user._id, { workspaceId: user._id })
@@ -31,16 +39,34 @@ export async function getUsers(workspaceId) {
   return users.map((user) => user.toJSON())
 }
 
-export async function getUserById(userId) {
+export async function getUserById(userId, options = {}) {
   if (!userId) return null
-  const user = await UserModel.findById(userId)
-  return user ? user.toJSON() : null
+  let query = UserModel.findById(userId)
+  if (options.includePasswordHash) {
+    query = query.select('+passwordHash')
+  }
+  const user = await query
+  if (!user) return null
+  if (options.includePasswordHash) {
+    const raw = user.toObject()
+    return { ...raw, id: raw._id.toString() }
+  }
+  return user.toJSON()
 }
 
-export async function getUserByEmail(email) {
+export async function getUserByEmail(email, options = {}) {
   if (!email) return null
-  const user = await UserModel.findOne({ email: String(email).trim().toLowerCase() })
-  return user ? user.toJSON() : null
+  let query = UserModel.findOne({ email: String(email).trim().toLowerCase() })
+  if (options.includePasswordHash) {
+    query = query.select('+passwordHash')
+  }
+  const user = await query
+  if (!user) return null
+  if (options.includePasswordHash) {
+    const raw = user.toObject()
+    return { ...raw, id: raw._id.toString() }
+  }
+  return user.toJSON()
 }
 
 export async function ensureUserWorkspace(userId) {
@@ -66,10 +92,14 @@ export async function getUsersByIds(userIds, workspaceId) {
 }
 
 export async function createUser(payload) {
+  const passwordHash = payload.passwordHash
+    ? payload.passwordHash
+    : await hashPassword(env.authDefaultPassword)
   let user = await UserModel.create({
     name: payload.name,
     email: payload.email,
     avatarUrl: payload.avatarUrl ?? '',
+    passwordHash,
     workspaceId: payload.workspaceId,
   })
   if (!user.workspaceId) {
@@ -98,6 +128,44 @@ export async function updateUser(userId, payload, workspaceId) {
     runValidators: true,
   })
   return user ? user.toJSON() : null
+}
+
+export async function updatePassword(userId, passwordHash) {
+  const user = await UserModel.findByIdAndUpdate(
+    userId,
+    {
+      passwordHash,
+      passwordResetTokenHash: null,
+      passwordResetExpiresAt: null,
+    },
+    { new: true, runValidators: true }
+  )
+  return user ? user.toJSON() : null
+}
+
+export async function setPasswordResetTokenByEmail(email, tokenHash, expiresAt) {
+  if (!email) return null
+  const user = await UserModel.findOneAndUpdate(
+    { email: String(email).trim().toLowerCase() },
+    {
+      passwordResetTokenHash: tokenHash,
+      passwordResetExpiresAt: expiresAt,
+    },
+    { new: true }
+  )
+  return user ? user.toJSON() : null
+}
+
+export async function getUserByPasswordResetToken(tokenHash) {
+  if (!tokenHash) return null
+  const now = new Date()
+  const user = await UserModel.findOne({
+    passwordResetTokenHash: tokenHash,
+    passwordResetExpiresAt: { $gt: now },
+  }).select('+passwordResetTokenHash +passwordResetExpiresAt')
+  if (!user) return null
+  const raw = user.toObject()
+  return { ...raw, id: raw._id.toString() }
 }
 
 export async function deleteUser(userId, workspaceId) {

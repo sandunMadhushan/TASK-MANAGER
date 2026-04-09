@@ -23,6 +23,21 @@ const userSchema = new mongoose.Schema(
       default: '',
       maxlength: 3000000,
     },
+    passwordHash: {
+      type: String,
+      required: true,
+      select: false,
+    },
+    passwordResetTokenHash: {
+      type: String,
+      select: false,
+      default: null,
+    },
+    passwordResetExpiresAt: {
+      type: Date,
+      select: false,
+      default: null,
+    },
     workspaceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -40,6 +55,9 @@ userSchema.set('toJSON', {
   transform: (_doc, ret) => {
     ret.id = ret._id.toString()
     delete ret._id
+    delete ret.passwordHash
+    delete ret.passwordResetTokenHash
+    delete ret.passwordResetExpiresAt
     return ret
   },
 })

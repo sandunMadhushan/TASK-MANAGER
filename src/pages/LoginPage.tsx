@@ -1,12 +1,14 @@
 import { motion } from 'framer-motion'
-import { ArrowRight, ShieldCheck, Sparkles, UserPlus } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, UserPlus } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { forgotPasswordApi } from '@/services/task-api'
 import { useAuthStore } from '@/store/auth-store'
 
 export function LoginPage() {
@@ -18,6 +20,13 @@ export function LoginPage() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [forgotOpen, setForgotOpen] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [isSendingReset, setIsSendingReset] = useState(false)
   const isSubmitting = mode === 'signin' ? isLoggingIn : isSigningUp
 
   if (currentUser) {
@@ -36,11 +45,15 @@ export function LoginPage() {
       toast.error('Email is required')
       return
     }
+    if (!password) {
+      toast.error('Password is required')
+      return
+    }
 
     if (mode === 'signin') {
-      const ok = await login(normalizedEmail)
+      const ok = await login({ email: normalizedEmail, password })
       if (!ok) {
-        toast.error('Login failed', { description: 'No user found for this email.' })
+        toast.error('Login failed', { description: 'Invalid email or password.' })
         return
       }
       toast.success('Welcome back')
@@ -52,16 +65,72 @@ export function LoginPage() {
       toast.error('Name is required')
       return
     }
-    const ok = await signup({ name: trimmedName, email: normalizedEmail })
+    if (password.length < 8) {
+      toast.error('Use a stronger password', { description: 'Minimum 8 characters required.' })
+      return
+    }
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match')
+      return
+    }
+    const ok = await signup({ name: trimmedName, email: normalizedEmail, password })
     if (!ok) {
-      toast.error('Sign up failed', { description: 'Email already exists or request failed.' })
+      toast.error('Sign up failed', {
+        description: 'Use a stronger password or try a different email.',
+      })
       return
     }
     toast.success('Account created')
   }
 
+  async function handleForgotPasswordSubmit(event: FormEvent) {
+    event.preventDefault()
+    const normalized = forgotEmail.trim().toLowerCase()
+    if (!normalized) {
+      toast.error('Email is required')
+      return
+    }
+    setIsSendingReset(true)
+    try {
+      await forgotPasswordApi(normalized)
+      setForgotOpen(false)
+      setForgotEmail('')
+      toast.success('If the account exists, reset instructions were sent.')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to request password reset.'
+      toast.error('Could not send reset link', { description: message })
+    } finally {
+      setIsSendingReset(false)
+    }
+  }
+
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10">
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Forgot password</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-3" onSubmit={handleForgotPasswordSubmit}>
+            <Input
+              type="email"
+              value={forgotEmail}
+              onChange={(event) => setForgotEmail(event.target.value)}
+              placeholder="you@company.com"
+              aria-label="Reset email"
+            />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setForgotOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSendingReset}>
+                {isSendingReset ? 'Sending...' : 'Send reset link'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <div className="pointer-events-none absolute -left-20 top-16 size-72 rounded-full bg-violet-500/18 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-20 right-10 size-80 rounded-full bg-indigo-500/14 blur-3xl" />
 
@@ -142,6 +211,48 @@ export function LoginPage() {
                 placeholder="alex@company.com"
                 aria-label="Email"
               />
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Password"
+                aria-label="Password"
+              />
+              <div className="flex justify-end -mt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto cursor-pointer px-1 py-0 text-[11px] text-muted-foreground"
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                  {showPassword ? 'Hide password' : 'Show password'}
+                </Button>
+              </div>
+              {mode === 'signup' ? (
+                <>
+                  <Input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    placeholder="Confirm password"
+                    aria-label="Confirm password"
+                  />
+                  <div className="flex justify-end -mt-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto cursor-pointer px-1 py-0 text-[11px] text-muted-foreground"
+                      onClick={() => setShowConfirmPassword((v) => !v)}
+                    >
+                      {showConfirmPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                      {showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                    </Button>
+                  </div>
+                </>
+              ) : null}
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? (
                   mode === 'signin' ? 'Signing in...' : 'Creating account...'
@@ -152,6 +263,21 @@ export function LoginPage() {
                   </>
                 )}
               </Button>
+              {mode === 'signin' ? (
+                <div className="text-right">
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto px-0 py-0 text-xs"
+                    onClick={() => {
+                      setForgotEmail(email)
+                      setForgotOpen(true)
+                    }}
+                  >
+                    Forgot password?
+                  </Button>
+                </div>
+              ) : null}
               <p className="text-xs text-muted-foreground">
                 Demo emails: alex@company.com, sophie@company.com
               </p>
