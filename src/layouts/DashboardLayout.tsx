@@ -13,7 +13,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   return (
-    <div className="relative min-h-dvh overflow-x-hidden">
+    <div className="relative h-dvh overflow-hidden">
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0 -z-10 bg-[oklch(0.1_0.03_275)]"
@@ -46,19 +46,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         ) : null}
       </AnimatePresence>
 
-      <div className="flex min-h-dvh">
+      <div className="flex h-full min-h-0">
         <aside
           className={cn(
-            'fixed inset-y-0 left-0 z-50 w-[min(18rem,88vw)] transition-transform duration-300 md:static md:z-0 md:w-64 md:translate-x-0 md:transition-none',
+            'fixed inset-y-0 left-0 z-50 w-[min(18rem,88vw)] transition-transform duration-300 md:static md:z-0 md:h-dvh md:w-64 md:translate-x-0 md:transition-none',
             mobileNavOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
           )}
         >
           <AppSidebar onNavigate={() => setMobileNavOpen(false)} />
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col md:pl-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col md:pl-0">
           <TopNav onMenuClick={() => setMobileNavOpen((o) => !o)} />
-          <main className="flex-1 px-4 pb-10 pt-2 md:px-8 md:pt-4">
+          <main className="scrollbar-glass min-h-0 flex-1 overflow-y-auto px-4 pb-10 pt-2 md:px-8 md:pt-4">
             {children}
           </main>
         </div>

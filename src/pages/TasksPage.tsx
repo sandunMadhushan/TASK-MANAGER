@@ -29,6 +29,23 @@ export function TasksPage() {
   const users = useTaskStore((s) => s.users)
   const assigneeFilter = searchParams.get('assignee') ?? 'all'
   const searchText = searchParams.get('q') ?? ''
+  const assigneeLabel =
+    assigneeFilter === 'all'
+      ? 'All'
+      : (users.find((user) => user.id === assigneeFilter)?.name ?? 'All')
+  const statusLabel: Record<'all' | TaskStatus, string> = {
+    all: 'All',
+    todo: 'To do',
+    'in-progress': 'In progress',
+    done: 'Done',
+  }
+  const sortLabel: Record<'due-asc' | 'due-desc' | 'newest' | 'oldest' | 'title', string> = {
+    'due-asc': 'Due soonest',
+    'due-desc': 'Due latest',
+    newest: 'Newest',
+    oldest: 'Oldest',
+    title: 'Title A-Z',
+  }
 
   function openCreateModal() {
     setCreateSession((s) => s + 1)
@@ -138,7 +155,7 @@ export function TasksPage() {
                 className="h-9 w-full border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
                 aria-label="Filter by status"
               >
-                <SelectValue />
+                <SelectValue>{statusLabel[statusFilter]}</SelectValue>
               </SelectTrigger>
               <SelectContent side="bottom" sideOffset={8} align="start" alignItemWithTrigger={false}>
                 <SelectItem value="all">All</SelectItem>
@@ -156,7 +173,7 @@ export function TasksPage() {
                 className="h-9 w-full border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
                 aria-label="Filter by assignee"
               >
-                <SelectValue />
+                <SelectValue>{assigneeLabel}</SelectValue>
               </SelectTrigger>
               <SelectContent side="bottom" sideOffset={8} align="start" alignItemWithTrigger={false}>
                 <SelectItem value="all">All</SelectItem>
@@ -187,7 +204,7 @@ export function TasksPage() {
                 className="h-auto border-0 bg-transparent px-0 py-0 text-xs shadow-none focus-visible:ring-0"
                 aria-label="Sort tasks"
               >
-                <SelectValue />
+                <SelectValue>{sortLabel[sortBy]}</SelectValue>
               </SelectTrigger>
               <SelectContent side="bottom" sideOffset={8} align="start" alignItemWithTrigger={false}>
                 <SelectItem value="due-asc">Due soonest</SelectItem>
