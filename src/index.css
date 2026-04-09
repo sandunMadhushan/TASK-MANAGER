@@ -173,4 +173,39 @@
     transition-duration: 0ms !important;
     scroll-behavior: auto !important;
   }
+
+  .glass-toast {
+    border: 1px solid rgb(255 255 255 / 0.14) !important;
+    background: linear-gradient(
+      180deg,
+      rgb(26 22 42 / 0.92),
+      rgb(17 24 39 / 0.9)
+    ) !important;
+    color: rgb(229 231 235) !important;
+    box-shadow:
+      0 12px 34px rgb(0 0 0 / 0.35),
+      0 0 0 1px rgb(167 139 250 / 0.16) inset !important;
+    backdrop-filter: blur(12px);
+  }
+
+  [data-sonner-toast] [data-title] {
+    color: rgb(243 244 246);
+    font-weight: 600;
+  }
+
+  [data-sonner-toast] [data-description] {
+    color: rgb(156 163 175);
+  }
+
+  [data-sonner-toast][data-styled='true'][data-type='success'] {
+    box-shadow:
+      0 12px 34px rgb(0 0 0 / 0.35),
+      0 0 0 1px rgb(16 185 129 / 0.26) inset !important;
+  }
+
+  [data-sonner-toast][data-styled='true'][data-type='error'] {
+    box-shadow:
+      0 12px 34px rgb(0 0 0 / 0.35),
+      0 0 0 1px rgb(244 63 94 / 0.3) inset !important;
+  }
 }

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { toast } from 'sonner'
 
 import {
   createTaskApi,
@@ -50,13 +51,15 @@ export const useTaskStore = create<TaskStore>((set) => ({
       const tasks = await fetchTasksApi()
       set({ tasks, isLoading: false, error: null })
     } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to load tasks. Please try again.'
       set({
         isLoading: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unable to load tasks. Please try again.',
+        error: message,
       })
+      toast.error('Failed to load tasks', { description: message })
     }
   },
   fetchUsers: async () => {
@@ -65,13 +68,15 @@ export const useTaskStore = create<TaskStore>((set) => ({
       const users = await fetchUsersApi()
       set({ users, isUsersLoading: false, error: null })
     } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to load users. Please try again.'
       set({
         isUsersLoading: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unable to load users. Please try again.',
+        error: message,
       })
+      toast.error('Failed to load team', { description: message })
     }
   },
   addTask: async (input) => {
@@ -83,15 +88,18 @@ export const useTaskStore = create<TaskStore>((set) => ({
         isCreating: false,
         error: null,
       }))
+      toast.success('Task created')
       return true
     } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to create task. Please try again.'
       set({
         isCreating: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unable to create task. Please try again.',
+        error: message,
       })
+      toast.error('Task creation failed', { description: message })
       return false
     }
   },
@@ -103,15 +111,18 @@ export const useTaskStore = create<TaskStore>((set) => ({
         tasks: s.tasks.map((t) => (t.id === id ? task : t)),
         isEditing: false,
       }))
+      toast.success('Task updated')
       return true
     } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to update task. Please try again.'
       set({
         isEditing: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unable to update task. Please try again.',
+        error: message,
       })
+      toast.error('Task update failed', { description: message })
       return false
     }
   },
@@ -123,14 +134,17 @@ export const useTaskStore = create<TaskStore>((set) => ({
         tasks: s.tasks.map((t) => (t.id === id ? updated : t)),
         updatingTaskId: null,
       }))
+      toast.success('Task status updated')
     } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to update status. Please try again.'
       set({
         updatingTaskId: null,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unable to update status. Please try again.',
+        error: message,
       })
+      toast.error('Status update failed', { description: message })
     }
   },
   deleteTask: async (id) => {
@@ -141,14 +155,17 @@ export const useTaskStore = create<TaskStore>((set) => ({
         tasks: s.tasks.filter((t) => t.id !== id),
         deletingTaskId: null,
       }))
+      toast.success('Task deleted')
     } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to delete task. Please try again.'
       set({
         deletingTaskId: null,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unable to delete task. Please try again.',
+        error: message,
       })
+      toast.error('Task deletion failed', { description: message })
     }
   },
 }))

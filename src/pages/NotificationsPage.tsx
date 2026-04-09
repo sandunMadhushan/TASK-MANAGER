@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { BellRing, Loader2, RefreshCw } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -37,6 +38,9 @@ export function NotificationsPage() {
       ])
       setNotifications(feed)
       setUnreadCount(unread)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to load notifications.'
+      toast.error('Failed to load notifications', { description: message })
     } finally {
       setIsLoading(false)
     }
@@ -52,6 +56,10 @@ export function NotificationsPage() {
     try {
       await markAllNotificationsReadApi(subscriberId)
       await loadData()
+      toast.success('Marked all notifications as read')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to mark all as read.'
+      toast.error('Failed to update notifications', { description: message })
     } finally {
       setIsMarking(false)
     }

@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { CheckCircle2, ListChecks, Mail, Pencil, Plus, Timer, Trash2, Users } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -88,13 +89,17 @@ export function TeamPage() {
     try {
       if (editingUserId) {
         await updateUserApi(editingUserId, { name: trimmedName, email: trimmedEmail })
+        toast.success('User updated')
       } else {
         await createUserApi({ name: trimmedName, email: trimmedEmail })
+        toast.success('User invited')
       }
       setDialogOpen(false)
       await Promise.all([fetchUsers(), fetchTasks()])
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Unable to save user.')
+      const message = error instanceof Error ? error.message : 'Unable to save user.'
+      setFormError(message)
+      toast.error('Failed to save user', { description: message })
     } finally {
       setIsSaving(false)
     }
@@ -105,6 +110,10 @@ export function TeamPage() {
     try {
       await deleteUserApi(userId)
       await Promise.all([fetchUsers(), fetchTasks()])
+      toast.success('User deleted')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to delete user.'
+      toast.error('Failed to delete user', { description: message })
     } finally {
       setDeletingUserId(null)
     }
