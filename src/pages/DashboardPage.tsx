@@ -1,67 +1,40 @@
 import { motion } from 'framer-motion'
+import { Plus } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
-import { DummyTaskCard, type DummyTask } from '@/components/dashboard/DummyTaskCard'
-
-const DUMMY_TASKS: DummyTask[] = [
-  {
-    id: '1',
-    title: 'Design system audit',
-    description:
-      'Review tokens, spacing, and motion across dashboard surfaces for consistency.',
-    status: 'in-progress',
-    dueLabel: 'Due Apr 12',
-    tag: 'Design',
-  },
-  {
-    id: '2',
-    title: 'API contract for tasks',
-    description:
-      'Draft request/response shapes for create, list, and status transitions.',
-    status: 'todo',
-    dueLabel: 'Due Apr 15',
-    tag: 'Backend',
-  },
-  {
-    id: '3',
-    title: 'Notification templates',
-    description:
-      'Map Novu workflows for assignment, completion, and deadline reminders.',
-    status: 'todo',
-    dueLabel: 'Due Apr 18',
-    tag: 'Notifications',
-  },
-  {
-    id: '4',
-    title: 'Mobile navigation polish',
-    description:
-      'Tighten hit targets, springy drawer motion, and focus order for a11y.',
-    status: 'done',
-    dueLabel: 'Completed',
-    tag: 'Frontend',
-  },
-  {
-    id: '5',
-    title: 'Weekly stakeholder sync',
-    description:
-      'Share progress on task flows, assignments, and notification triggers.',
-    status: 'in-progress',
-    dueLabel: 'Due Apr 10',
-    tag: 'Ops',
-  },
-  {
-    id: '6',
-    title: 'Empty & loading states',
-    description:
-      'Add skeleton rows and friendly copy for first-time project setup.',
-    status: 'todo',
-    dueLabel: 'Due Apr 22',
-    tag: 'UX',
-  },
-]
+import { CreateTaskModal } from '@/components/tasks/CreateTaskModal'
+import { TaskListView } from '@/components/tasks/TaskListView'
+import { Button } from '@/components/ui/button'
+import { isDueWithinDays } from '@/lib/format-due-date'
+import { useTaskStore } from '@/store/task-store'
 
 export function DashboardPage() {
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createSession, setCreateSession] = useState(0)
+  const tasks = useTaskStore((s) => s.tasks)
+
+  function openCreateModal() {
+    setCreateSession((s) => s + 1)
+    setCreateOpen(true)
+  }
+
+  const { activeCount, dueSoonCount } = useMemo(() => {
+    const active = tasks.filter((t) => t.status !== 'done').length
+    const dueSoon = tasks.filter(
+      (t) =>
+        t.status !== 'done' && isDueWithinDays(t.dueDate, 7)
+    ).length
+    return { activeCount: active, dueSoonCount: dueSoon }
+  }, [tasks])
+
   return (
     <div className="mx-auto max-w-7xl space-y-8">
+      <CreateTaskModal
+        key={createSession}
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+      />
+
       <motion.div
         animate={{ opacity: 1, y: 0 }}
         className="space-y-2"
@@ -77,52 +50,60 @@ export function DashboardPage() {
               Good afternoon, Alex
             </h1>
             <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
-              Here is a glassmorphism preview of your workspace. Task data is
-              static for now — we will connect APIs in later steps.
+              Manage tasks in the browser with smooth add/remove animations.
+              Data is stored with Zustand until the API is wired in Step 4.
             </p>
           </div>
           <motion.div
-            className="flex gap-3"
+            className="flex flex-wrap items-center gap-3"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.35 }}
           >
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left shadow-lg shadow-black/20 backdrop-blur-md">
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Active
-              </p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
-                18
-              </p>
+            <div className="flex gap-3">
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left shadow-lg shadow-black/20 backdrop-blur-md">
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Active
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+                  {activeCount}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left shadow-lg shadow-black/20 backdrop-blur-md">
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Due in 7d
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+                  {dueSoonCount}
+                </p>
+              </div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left shadow-lg shadow-black/20 backdrop-blur-md">
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Due soon
-              </p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
-                6
-              </p>
-            </div>
+            <Button
+              className="shadow-lg shadow-primary/25"
+              type="button"
+              onClick={openCreateModal}
+            >
+              <Plus className="size-4" />
+              New task
+            </Button>
           </motion.div>
         </div>
       </motion.div>
 
       <section aria-labelledby="tasks-heading" className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2
             id="tasks-heading"
             className="font-heading text-lg font-semibold tracking-tight"
           >
-            Focus for this week
+            Your tasks
           </h2>
-          <p className="text-xs text-muted-foreground">Dummy cards · Step 1</p>
+          <p className="text-xs text-muted-foreground">
+            Step 2 · local state only
+          </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {DUMMY_TASKS.map((task, index) => (
-            <DummyTaskCard key={task.id} index={index} task={task} />
-          ))}
-        </div>
+        <TaskListView onCreateClick={openCreateModal} />
       </section>
     </div>
   )

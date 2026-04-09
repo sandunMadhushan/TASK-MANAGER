@@ -39,14 +39,14 @@ Non-goals for early steps: shipping production auth or APIs before their dedicat
 | Milestone | Status | Notes |
 |-----------|--------|--------|
 | Step 1 — Frontend setup & UI foundation | **Done** | Vite + React + TS, Tailwind v4, ShadCN, Framer Motion, glass dashboard shell, dummy task cards. No backend or auth. |
-| Step 2 — Task UI (frontend only) | Not started | Task list, create modal, animations; still no API. |
+| Step 2 — Task UI (frontend only) | **Done** | `TaskCard`, `TaskListView`, `CreateTaskModal`; Zustand task store; add/remove/status animations; title validation. No API. |
 | Step 3 — Backend setup | Not started | Express, MongoDB, Task model, REST endpoints. |
 | Step 4 — Connect frontend ↔ API | Not started | Replace dummy data, loading and error handling. |
 | Step 5 — Users & assignment | Not started | User model, assign tasks, show assignee in UI. |
 | Step 6 — Novu integration | Not started | Triggers: assigned, completed, deadline near. |
 | Step 7 — UI polish | Not started | Micro-interactions, skeletons, empty states, responsiveness. |
 
-**Last README update:** 2026-04-09 (Step 1 complete).
+**Last README update:** 2026-04-09 (Steps 1–2 complete).
 
 ---
 
@@ -60,17 +60,17 @@ Use this as the single checklist for planning and for updating the [Current stat
 - [x] Tailwind CSS v4 (`@tailwindcss/vite`)
 - [x] ShadCN UI (components + theme)
 - [x] Framer Motion
-- [x] Zustand installed (store placeholder only)
+- [x] Zustand installed; task store added in Step 2
 - [x] Base layout: glass sidebar, top navbar, dashboard, dummy cards
 - [x] No backend, no auth, no business logic
 
-### Step 2 — Task UI (frontend only)
+### Step 2 — Task UI (frontend only) *(complete)*
 
-- [ ] `TaskCard` component (title, description, status, due date)
-- [ ] Task list / board view
-- [ ] Create Task modal (controlled fields, validation UX)
-- [ ] Framer Motion: add/remove animations, modal transitions
-- [ ] Zustand (or local state) for demo task list—still **no** HTTP calls
+- [x] `TaskCard` component (title, description, status, due date, tag; status select + delete)
+- [x] `TaskListView` grid + empty state
+- [x] Create Task modal (ShadCN Dialog + fields; title validation; glass styling)
+- [x] Framer Motion: list enter/exit (`AnimatePresence`), modal inner motion, card hover
+- [x] Zustand `useTaskStore` for seeded + user tasks—still **no** HTTP calls
 
 ### Step 3 — Backend setup
 
@@ -117,7 +117,7 @@ Use this as the single checklist for planning and for updating the [Current stat
 | Styling | Tailwind CSS v4, `tw-animate-css` |
 | Components | ShadCN UI (Base UI primitives + `components.json`) |
 | Motion | Framer Motion |
-| State | Zustand (reserved; minimal use until Step 2+) |
+| State | Zustand (`useTaskStore` for tasks in Step 2+) |
 | Icons | Lucide React |
 
 ### Backend & services *(planned)*
@@ -150,15 +150,19 @@ High-level layout. Backend folders appear once Step 3 is implemented (either und
     ├── main.tsx
     ├── index.css             # Global styles + design tokens
     ├── components/
-    │   ├── dashboard/        # e.g. DummyTaskCard (Step 1)
     │   ├── layout/           # AppSidebar, TopNav
+    │   ├── tasks/            # TaskCard, TaskListView, CreateTaskModal
     │   └── ui/               # ShadCN primitives
     ├── hooks/                # Shared hooks (expand per feature)
     ├── layouts/              # Route/shell layouts
-    ├── lib/                  # utils (e.g. cn)
+    ├── lib/                  # utils (e.g. cn), format-due-date
     ├── pages/                # Page-level views
     ├── services/             # API & external clients (Step 4+)
-    └── store/                # Zustand stores (Step 2+)
+    ├── store/
+    │   ├── index.ts          # re-exports
+    │   └── task-store.ts     # tasks state (Step 2+)
+    └── types/
+        └── task.ts           # Task, TaskStatus
 ```
 
 **Suggested backend layout (when created):**

@@ -1,2 +1,1 @@
-/** Zustand stores will be added in Step 2+. */
-export {}
+export { useTaskStore } from '@/store/task-store'
