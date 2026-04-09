@@ -40,13 +40,13 @@ Non-goals for early steps: shipping production auth or APIs before their dedicat
 |-----------|--------|--------|
 | Step 1 — Frontend setup & UI foundation | **Done** | Vite + React + TS, Tailwind v4, ShadCN, Framer Motion, glass dashboard shell, dummy task cards. No backend or auth. |
 | Step 2 — Task UI (frontend only) | **Done** | `TaskCard`, `TaskListView`, `CreateTaskModal`; Zustand task store; add/remove/status animations; title validation. No API. |
-| Step 3 — Backend setup | Not started | Express, MongoDB, Task model, REST endpoints. |
+| Step 3 — Backend setup | **Done** | Express API in `server/`, MongoDB config, Mongoose `TaskModel`, create/list/update-status routes. |
 | Step 4 — Connect frontend ↔ API | Not started | Replace dummy data, loading and error handling. |
 | Step 5 — Users & assignment | Not started | User model, assign tasks, show assignee in UI. |
 | Step 6 — Novu integration | Not started | Triggers: assigned, completed, deadline near. |
 | Step 7 — UI polish | Not started | Micro-interactions, skeletons, empty states, responsiveness. |
 
-**Last README update:** 2026-04-09 (Steps 1–2 complete).
+**Last README update:** 2026-04-09 (Steps 1–3 complete).
 
 ---
 
@@ -72,12 +72,12 @@ Use this as the single checklist for planning and for updating the [Current stat
 - [x] Framer Motion: list enter/exit (`AnimatePresence`), modal inner motion, card hover
 - [x] Zustand `useTaskStore` for seeded + user tasks—still **no** HTTP calls
 
-### Step 3 — Backend setup
+### Step 3 — Backend setup *(complete)*
 
-- [ ] Express app and project layout: `controllers/`, `models/`, `routes/`, `services/`, `config/`
-- [ ] MongoDB connection (Mongoose)
-- [ ] **Task** schema: `title`, `description`, `status`, `assignedTo`, `dueDate`, `createdAt`
-- [ ] APIs: create task, list tasks, update status
+- [x] Express app + `server/config`, `server/controllers`, `server/models`, `server/routes`, `server/services`
+- [x] MongoDB connection through Mongoose (`server/config/db.js`)
+- [x] **Task** schema with `title`, `description`, `status`, `assignedTo`, `dueDate`, `createdAt`
+- [x] APIs: `POST /api/tasks`, `GET /api/tasks`, `PATCH /api/tasks/:taskId/status`
 
 ### Step 4 — Connect frontend + backend
 
@@ -145,6 +145,20 @@ High-level layout. Backend folders appear once Step 3 is implemented (either und
 ├── tsconfig*.json
 ├── eslint.config.js
 ├── public/
+├── server/
+│   ├── app.js
+│   ├── index.js
+│   ├── config/
+│   │   ├── db.js
+│   │   └── env.js
+│   ├── controllers/
+│   │   └── task-controller.js
+│   ├── models/
+│   │   └── task-model.js
+│   ├── routes/
+│   │   └── task-routes.js
+│   └── services/
+│       └── task-service.js
 └── src/
     ├── App.tsx
     ├── main.tsx
@@ -185,7 +199,7 @@ server/   # or ./ at repo root — pick one convention
 - **Node.js** 20+ (LTS recommended)
 - **npm** (ships with Node)
 
-Optional later: **MongoDB**, **Novu** instance URLs and API keys (document under [Future configuration](#future-configuration)).
+You also need **MongoDB** running locally (or a reachable hosted URI) for backend APIs.
 
 ### Install
 
@@ -201,6 +215,22 @@ npm run dev
 
 Open the URL Vite prints (typically `http://localhost:5173`).
 
+### Backend development
+
+1) Copy env template and adjust values:
+
+```bash
+cp .env.example .env
+```
+
+2) Start API server:
+
+```bash
+npm run server:dev
+```
+
+Default API URL: `http://localhost:4000`
+
 ### Production build
 
 ```bash
@@ -215,9 +245,44 @@ npm run preview   # optional local preview of dist/
 | Command | Purpose |
 |---------|---------|
 | `npm run dev` | Start Vite dev server with HMR |
+| `npm run server:dev` | Start Express API server with Node watch mode |
+| `npm run server:start` | Start Express API server |
 | `npm run build` | Typecheck (`tsc -b`) + production bundle |
 | `npm run preview` | Serve the `dist/` output locally |
 | `npm run lint` | ESLint across the project |
+
+---
+
+## Backend API (Step 3)
+
+Base URL: `http://localhost:4000/api`
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `GET` | `/health` | Health check |
+| `GET` | `/tasks` | List tasks |
+| `POST` | `/tasks` | Create a task |
+| `PATCH` | `/tasks/:taskId/status` | Update task status |
+
+Create payload:
+
+```json
+{
+  "title": "Draft API contract",
+  "description": "Define create/list/update schemas",
+  "status": "todo",
+  "assignedTo": "user-id-or-name",
+  "dueDate": "2026-04-20"
+}
+```
+
+Status update payload:
+
+```json
+{
+  "status": "in-progress"
+}
+```
 
 ---
 
@@ -233,7 +298,7 @@ npm run preview   # optional local preview of dist/
 
 ## Future configuration
 
-> Fill in as Steps 3–6 land. Example shape:
+> Keep this updated as Steps 4–6 land. Step 3 variables are already active.
 
 | Variable | Used when | Description |
 |----------|-----------|---------------|
