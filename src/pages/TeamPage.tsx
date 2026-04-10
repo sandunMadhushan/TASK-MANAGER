@@ -1,7 +1,13 @@
 import { motion } from 'framer-motion'
-import { CheckCircle2, ListChecks, Mail, Pencil, Plus, Timer, Trash2, Users } from 'lucide-react'
-import { useMemo, useState, type FormEvent } from 'react'
+import { CheckCircle2, ListChecks, LogOut, Mail, Plus, Timer, Trash2, Users } from 'lucide-react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+
+import {
+  getWorkspaceRootId,
+  isWorkspaceOwnerConfirmedFromTeam,
+  isWorkspaceOwnerUser,
+} from '@/lib/workspace-role'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -10,7 +16,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { createUserApi, deleteUserApi, updateUserApi } from '@/services/task-api'
+import {
+  cancelWorkspacePendingInviteApi,
+  createUserApi,
+  deleteUserApi,
+  fetchWorkspacePendingInvitesApi,
+  type TeamInviteItem,
+} from '@/services/task-api'
 import { useAuthStore } from '@/store/auth-store'
 import { useTaskStore } from '@/store/task-store'
 
@@ -24,13 +36,14 @@ export function TeamPage() {
   const [searchParams] = useSearchParams()
   const searchText = (searchParams.get('q') ?? '').trim().toLowerCase()
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingUserId, setEditingUserId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [formError, setFormError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
   const [manageUsersOpen, setManageUsersOpen] = useState(false)
+  const [pendingInvites, setPendingInvites] = useState<TeamInviteItem[]>([])
+  const [cancellingInviteId, setCancellingInviteId] = useState<string | null>(null)
 
   const statsByUser = useMemo(() => {
     const map = new Map<
@@ -60,26 +73,51 @@ export function TeamPage() {
     })
   }, [searchText, users])
 
+  const isWorkspaceOwner = useMemo(
+    () => isWorkspaceOwnerUser(currentUser, users),
+    [currentUser, users]
+  )
+  const workspaceRootId = useMemo(
+    () => getWorkspaceRootId(currentUser, users),
+    [currentUser, users]
+  )
+  const ownerConfirmedFromTeam = useMemo(
+    () => isWorkspaceOwnerConfirmedFromTeam(currentUser, users),
+    [currentUser, users]
+  )
+
   function openInvite() {
-    setEditingUserId(null)
+    if (!isWorkspaceOwner) return
     setName('')
     setEmail('')
     setFormError('')
     setDialogOpen(true)
   }
 
-  function openEdit(userId: string) {
-    const user = users.find((u) => u.id === userId)
-    if (!user) return
-    setEditingUserId(user.id)
-    setName(user.name)
-    setEmail(user.email)
-    setFormError('')
-    setDialogOpen(true)
-  }
+  useEffect(() => {
+    if (!manageUsersOpen) return
+    if (!ownerConfirmedFromTeam) {
+      setPendingInvites([])
+      return
+    }
+    async function loadPendingInvites() {
+      try {
+        const invites = await fetchWorkspacePendingInvitesApi()
+        setPendingInvites(invites)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to load pending invites.'
+        toast.error('Failed to load pending invites', { description: message })
+      }
+    }
+    void loadPendingInvites()
+  }, [manageUsersOpen, ownerConfirmedFromTeam])
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
+    if (!isWorkspaceOwner) {
+      setFormError('Only the workspace owner can send invites.')
+      return
+    }
     const trimmedName = name.trim()
     const trimmedEmail = email.trim().toLowerCase()
     if (!trimmedName || !trimmedEmail) {
@@ -90,15 +128,22 @@ export function TeamPage() {
     setIsSaving(true)
     setFormError('')
     try {
-      if (editingUserId) {
-        await updateUserApi(editingUserId, { name: trimmedName, email: trimmedEmail })
-        toast.success('User updated')
-      } else {
-        await createUserApi({ name: trimmedName, email: trimmedEmail })
-        toast.success('User invited')
-      }
+      const result = (await createUserApi({
+        name: trimmedName,
+        email: trimmedEmail,
+      })) as { message?: string }
+      toast.success('Invite processed', {
+        description:
+          result.message ??
+          'If this email already has an account, they can accept or decline from Notifications.',
+      })
       setDialogOpen(false)
       await Promise.all([fetchUsers(), fetchTasks()])
+      const teamUsers = useTaskStore.getState().users
+      if (isWorkspaceOwnerConfirmedFromTeam(currentUser, teamUsers)) {
+        const invites = await fetchWorkspacePendingInvitesApi()
+        setPendingInvites(invites)
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to save user.'
       setFormError(message)
@@ -108,15 +153,38 @@ export function TeamPage() {
     }
   }
 
+  async function handleCancelInvite(inviteId: string) {
+    setCancellingInviteId(inviteId)
+    try {
+      await cancelWorkspacePendingInviteApi(inviteId)
+      const invites = await fetchWorkspacePendingInvitesApi()
+      setPendingInvites(invites)
+      toast.success('Invite cancelled')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to cancel invite.'
+      toast.error('Failed to cancel invite', { description: message })
+    } finally {
+      setCancellingInviteId(null)
+    }
+  }
+
   async function handleDelete(userId: string) {
     setDeletingUserId(userId)
+    const isLeaving = currentUser?.id === userId && !isWorkspaceOwner
     try {
-      await deleteUserApi(userId)
+      const { message } = await deleteUserApi(userId)
       await Promise.all([fetchUsers(), fetchTasks()])
-      toast.success('User deleted')
+      if (isLeaving) {
+        await useAuthStore.getState().bootstrap()
+      }
+      toast.success(isLeaving ? 'Left team' : 'Removed from team', {
+        description: message,
+      })
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to delete user.'
-      toast.error('Failed to delete user', { description: message })
+      const message = error instanceof Error ? error.message : 'Unable to update membership.'
+      toast.error(isLeaving ? 'Could not leave team' : 'Could not remove member', {
+        description: message,
+      })
     } finally {
       setDeletingUserId(null)
     }
@@ -127,11 +195,9 @@ export function TeamPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingUserId ? 'Edit user' : 'Invite user'}</DialogTitle>
+            <DialogTitle>Invite user</DialogTitle>
             <DialogDescription>
-              {editingUserId
-                ? 'Update the member details.'
-                : 'Add a new workspace member for task assignment.'}
+              Add a workspace member by email. Existing accounts get a team invite notification.
             </DialogDescription>
           </DialogHeader>
           <form className="space-y-3" onSubmit={handleSubmit}>
@@ -169,7 +235,7 @@ export function TeamPage() {
                 Cancel
               </Button>
               <Button type="submit" disabled={isSaving}>
-                {isSaving ? 'Saving...' : editingUserId ? 'Save changes' : 'Invite user'}
+                {isSaving ? 'Sending...' : 'Invite user'}
               </Button>
             </div>
           </form>
@@ -179,9 +245,44 @@ export function TeamPage() {
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Manage users</DialogTitle>
-            <DialogDescription>Edit or remove workspace members.</DialogDescription>
+            <DialogDescription>
+              {isWorkspaceOwner
+                ? 'Cancel pending invites or remove members. Profile is where each person edits their own details.'
+                : 'View teammates. You can leave the team from your row; only the owner can remove others.'}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
+            {isWorkspaceOwner && pendingInvites.length > 0 ? (
+              <div className="space-y-2 rounded-xl border border-amber-300/30 bg-amber-500/10 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-200">Invited / pending</p>
+                {pendingInvites.map((invite) => (
+                  <div
+                    key={`pending-${invite.id}`}
+                    className="flex flex-col gap-2 rounded-lg border border-amber-300/25 bg-black/20 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{invite.targetEmail}</p>
+                      <p className="text-xs text-muted-foreground">Invited by {invite.inviterName}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="rounded-full border border-amber-300/40 bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-200">
+                        Pending
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        type="button"
+                        disabled={cancellingInviteId === invite.id}
+                        onClick={() => void handleCancelInvite(invite.id)}
+                      >
+                        {cancellingInviteId === invite.id ? 'Cancelling…' : 'Cancel invite'}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
             {visibleUsers.length === 0 ? (
               <p className="rounded-xl border border-dashed border-white/15 bg-white/4 p-4 text-center text-sm text-muted-foreground">
                 No team members match your search.
@@ -207,29 +308,31 @@ export function TeamPage() {
                     </p>
                     <p className="truncate text-xs text-muted-foreground">{user.email}</p>
                   </div>
-                  <div className="inline-flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      type="button"
-                      onClick={() => {
-                        setManageUsersOpen(false)
-                        openEdit(user.id)
-                      }}
-                    >
-                      <Pencil className="size-3.5" />
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      type="button"
-                      disabled={deletingUserId === user.id}
-                      onClick={() => void handleDelete(user.id)}
-                    >
-                      <Trash2 className="size-3.5" />
-                      {deletingUserId === user.id ? 'Deleting...' : 'Delete'}
-                    </Button>
+                  <div className="inline-flex flex-wrap items-center gap-2">
+                    {isWorkspaceOwner && String(user.id) !== workspaceRootId ? (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        type="button"
+                        disabled={deletingUserId === user.id}
+                        onClick={() => void handleDelete(user.id)}
+                      >
+                        <Trash2 className="size-3.5" />
+                        {deletingUserId === user.id ? 'Removing...' : 'Remove from team'}
+                      </Button>
+                    ) : null}
+                    {!isWorkspaceOwner && currentUser?.id === user.id ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        type="button"
+                        disabled={deletingUserId === user.id}
+                        onClick={() => void handleDelete(user.id)}
+                      >
+                        <LogOut className="size-3.5" />
+                        {deletingUserId === user.id ? 'Leaving...' : 'Leave team'}
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               ))
@@ -255,10 +358,12 @@ export function TeamPage() {
               <Users className="size-4" />
               Manage users
             </Button>
-            <Button type="button" onClick={openInvite}>
-              <Plus className="size-4" />
-              Invite user
-            </Button>
+            {isWorkspaceOwner ? (
+              <Button type="button" onClick={openInvite}>
+                <Plus className="size-4" />
+                Invite user
+              </Button>
+            ) : null}
           </div>
         </div>
       </motion.div>

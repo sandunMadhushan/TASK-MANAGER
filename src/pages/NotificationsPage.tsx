@@ -1,24 +1,38 @@
 import { motion } from 'framer-motion'
 import { BellRing, Loader2, RefreshCw } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
+  acceptTeamInviteApi,
+  declineTeamInviteApi,
   fetchNotificationFeedApi,
+  fetchTeamInvitesApi,
   fetchUnreadNotificationCountApi,
   markAllNotificationsReadApi,
   type NotificationFeedItem,
+  type TeamInviteItem,
 } from '@/services/task-api'
 import { useAuthStore } from '@/store/auth-store'
+import { useTaskStore } from '@/store/task-store'
 
 export function NotificationsPage() {
   const currentUser = useAuthStore((s) => s.currentUser)
+  const [, setSearchParams] = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
   const [isMarking, setIsMarking] = useState(false)
+  const [inviteActionId, setInviteActionId] = useState<string | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifications, setNotifications] = useState<NotificationFeedItem[]>([])
+  const [teamInvites, setTeamInvites] = useState<TeamInviteItem[]>([])
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
+  const [selectedInvite, setSelectedInvite] = useState<TeamInviteItem | null>(null)
+  const fetchUsers = useTaskStore((s) => s.fetchUsers)
+  const fetchTasks = useTaskStore((s) => s.fetchTasks)
 
   const subscriberId = useMemo(() => currentUser?.id ?? null, [currentUser])
 
@@ -32,6 +46,32 @@ export function NotificationsPage() {
       ])
       setNotifications(feed)
       setUnreadCount(unread)
+      const invites = await fetchTeamInvitesApi()
+      setTeamInvites(invites)
+
+      const pendingId =
+        typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('teamInvite')
+          : null
+      if (pendingId) {
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev)
+            next.delete('teamInvite')
+            return next
+          },
+          { replace: true }
+        )
+        const inv = invites.find((i) => i.id === pendingId)
+        if (inv) {
+          setSelectedInvite(inv)
+          setInviteDialogOpen(true)
+        } else {
+          toast.info('Invite unavailable', {
+            description: 'It may have been cancelled or already accepted or declined.',
+          })
+        }
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to load notifications.'
       toast.error('Failed to load notifications', { description: message })
@@ -59,8 +99,95 @@ export function NotificationsPage() {
     }
   }
 
+  async function acceptInvite(inviteId: string) {
+    setInviteActionId(inviteId)
+    try {
+      await acceptTeamInviteApi(inviteId)
+      await useAuthStore.getState().bootstrap()
+      await Promise.all([loadData(), fetchUsers(), fetchTasks()])
+      setInviteDialogOpen(false)
+      setSelectedInvite(null)
+      toast.success('Invite accepted', {
+        description: 'You are now a member of that team workspace.',
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to accept invite.'
+      toast.error('Failed to accept invite', { description: message })
+    } finally {
+      setInviteActionId(null)
+    }
+  }
+
+  async function declineInvite(inviteId: string) {
+    setInviteActionId(inviteId)
+    try {
+      await declineTeamInviteApi(inviteId)
+      await loadData()
+      setInviteDialogOpen(false)
+      setSelectedInvite(null)
+      toast.success('Invite declined')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to decline invite.'
+      toast.error('Failed to decline invite', { description: message })
+    } finally {
+      setInviteActionId(null)
+    }
+  }
+
+  function openInviteDialogFromNotification(item: NotificationFeedItem) {
+    const payload = (item.payload ?? {}) as Record<string, unknown>
+    if (payload.type !== 'team-invite' || !payload.actionRequired) return
+    const inviteId = typeof payload.inviteId === 'string' ? payload.inviteId : ''
+    if (!inviteId) return
+    const invite = teamInvites.find((x) => x.id === inviteId)
+    if (!invite) {
+      toast.info('Invite already handled or expired')
+      return
+    }
+    setSelectedInvite(invite)
+    setInviteDialogOpen(true)
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
+      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Team invite</DialogTitle>
+            <DialogDescription>
+              {selectedInvite
+                ? `${selectedInvite.inviterName} invited you to join their team.`
+                : 'Review this invite and choose an action.'}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedInvite ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Invite sent to <span className="font-medium text-foreground">{selectedInvite.targetEmail}</span>
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={inviteActionId === selectedInvite.id}
+                  onClick={() => void declineInvite(selectedInvite.id)}
+                >
+                  Decline
+                </Button>
+                <Button
+                  type="button"
+                  disabled={inviteActionId === selectedInvite.id}
+                  onClick={() => void acceptInvite(selectedInvite.id)}
+                >
+                  {inviteActionId === selectedInvite.id ? <Loader2 className="size-4 animate-spin" /> : null}
+                  Accept
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
       <motion.div
         animate={{ opacity: 1, y: 0 }}
         initial={{ opacity: 0, y: 10 }}
@@ -106,6 +233,45 @@ export function NotificationsPage() {
 
       <Card className="border-white/10 bg-white/4 backdrop-blur-md">
         <CardContent className="p-4">
+          {teamInvites.length > 0 ? (
+            <div className="mb-4 space-y-2">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">Team invites</p>
+              {teamInvites.map((invite) => {
+                const isActing = inviteActionId === invite.id
+                return (
+                  <article key={invite.id} className="rounded-xl border border-emerald-400/35 bg-emerald-500/10 p-3">
+                    <p className="text-sm font-medium text-foreground">
+                      {invite.inviterName} invited you to join their team
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Invite sent to {invite.targetEmail} by {invite.inviterEmail}
+                    </p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        type="button"
+                        onClick={() => void acceptInvite(invite.id)}
+                        disabled={isActing}
+                      >
+                        {isActing ? <Loader2 className="size-4 animate-spin" /> : null}
+                        Accept
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        type="button"
+                        onClick={() => void declineInvite(invite.id)}
+                        disabled={isActing}
+                      >
+                        Decline
+                      </Button>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          ) : null}
+
           {isLoading ? (
             <div className="flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">
               <Loader2 className="mr-2 size-4 animate-spin" />
@@ -130,7 +296,12 @@ export function NotificationsPage() {
                     item.isRead
                       ? 'border-white/10 bg-white/5'
                       : 'border-violet-400/35 bg-violet-500/10 shadow-[0_0_0_1px_rgba(167,139,250,0.25)]'
+                  } ${
+                    (item.payload as Record<string, unknown> | undefined)?.type === 'team-invite'
+                      ? 'cursor-pointer hover:border-emerald-300/45'
+                      : ''
                   }`}
+                  onClick={() => openInviteDialogFromNotification(item)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex min-w-0 items-start gap-2">

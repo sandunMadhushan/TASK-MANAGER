@@ -77,6 +77,42 @@ export async function notifyPasswordReset(user, payload) {
   })
 }
 
+export async function notifyTeamInviteSent(inviteeUser, payload) {
+  if (!env.novuWorkflowTeamInviteSent || !inviteeUser) return
+  await triggerForUsers({
+    workflowId: env.novuWorkflowTeamInviteSent,
+    users: [inviteeUser],
+    payload,
+  })
+}
+
+export async function notifyTeamInviteAccepted(inviterUser, payload) {
+  if (!env.novuWorkflowTeamInviteAccepted || !inviterUser) return
+  await triggerForUsers({
+    workflowId: env.novuWorkflowTeamInviteAccepted,
+    users: [inviterUser],
+    payload,
+  })
+}
+
+export async function notifyTeamInviteDeclined(inviterUser, payload) {
+  if (!env.novuWorkflowTeamInviteDeclined || !inviterUser) return
+  await triggerForUsers({
+    workflowId: env.novuWorkflowTeamInviteDeclined,
+    users: [inviterUser],
+    payload,
+  })
+}
+
+export async function notifyTeamInviteJoined(inviteeUser, payload) {
+  if (!env.novuWorkflowTeamInviteJoined || !inviteeUser) return
+  await triggerForUsers({
+    workflowId: env.novuWorkflowTeamInviteJoined,
+    users: [inviteeUser],
+    payload,
+  })
+}
+
 export async function sendDeadlineNearReminders(hoursAhead = 24) {
   if (!env.novuWorkflowDeadlineNear || !canSend(env.novuWorkflowDeadlineNear)) {
     return { scanned: 0, triggered: 0 }

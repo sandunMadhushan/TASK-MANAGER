@@ -1,10 +1,17 @@
 import {
   createUser,
-  deleteUser,
+  getUserByEmail,
   getUsers,
+  removeMemberFromWorkspace,
   updateUser,
 } from '../services/user-service.js'
 import { createNovuSubscriberHash } from '../services/novu-auth-service.js'
+import {
+  cancelPendingTeamInvite,
+  createTeamInvite,
+  getPendingTeamInvitesForWorkspace,
+} from '../services/team-invite-service.js'
+import { notifyTeamInviteSent } from '../services/notification-service.js'
 
 export async function getUsersHandler(req, res, next) {
   try {
@@ -38,7 +45,13 @@ export async function getNovuSubscriberAuthHandler(req, res, next) {
 
 export async function createUserHandler(req, res, next) {
   try {
+    if (!isWorkspaceOwner(req)) {
+      return res.status(403).json({ message: 'Only the workspace owner can invite users.' })
+    }
     const workspaceId = req.user?.workspaceId
+    const inviterUserId = req.user?.id
+    const inviterName = req.user?.name
+    const inviterEmail = req.user?.email
     const name = String(req.body?.name ?? '').trim()
     const email = String(req.body?.email ?? '').trim().toLowerCase()
     const avatarUrl =
@@ -49,8 +62,49 @@ export async function createUserHandler(req, res, next) {
     if (!isValidAvatarValue(avatarUrl)) {
       return res.status(400).json({ message: 'Avatar must be a valid image URL or uploaded image data.' })
     }
-    const user = await createUser({ name, email, avatarUrl, workspaceId })
-    return res.status(201).json(user)
+
+    const existing = await getUserByEmail(email)
+    if (!existing) {
+      const user = await createUser({ name, email, avatarUrl, workspaceId })
+      return res.status(201).json(user)
+    }
+
+    if (existing.id === inviterUserId) {
+      return res.status(400).json({ message: 'You cannot invite the account you are logged in with.' })
+    }
+    if (String(existing.workspaceId ?? '') === String(workspaceId ?? '')) {
+      return res.status(409).json({ message: 'This user is already on your team.' })
+    }
+
+    const { invite, created } = await createTeamInvite({
+      workspaceId,
+      inviterUserId,
+      inviterName,
+      inviterEmail,
+      targetUserId: existing.id,
+      targetEmail: existing.email,
+    })
+
+    if (created) {
+      await notifyTeamInviteSent(existing, {
+        type: 'team-invite',
+        actionRequired: true,
+        inviteId: invite.id,
+        inviterName: inviterName ?? 'A teammate',
+        inviterEmail: inviterEmail ?? '',
+        targetEmail: existing.email,
+        message: `${inviterName ?? 'A teammate'} invited you to join their team.`,
+      })
+    }
+
+    return res.status(created ? 202 : 200).json({
+      ...existing,
+      inviteStatus: 'pending',
+      inviteId: invite.id,
+      message: created
+        ? 'Invite sent. The user can accept or decline from their Notifications page.'
+        : 'This user already has a pending invite from your workspace.',
+    })
   } catch (error) {
     if (error?.code === 11000) {
       return res.status(409).json({ message: 'A user with this email already exists.' })
@@ -59,10 +113,46 @@ export async function createUserHandler(req, res, next) {
   }
 }
 
+export async function getPendingWorkspaceInvitesHandler(req, res, next) {
+  try {
+    if (!isWorkspaceOwner(req)) {
+      return res.status(403).json({ message: 'Only the workspace owner can view pending invites.' })
+    }
+    const workspaceId = req.user?.workspaceId
+    const invites = await getPendingTeamInvitesForWorkspace(workspaceId)
+    return res.status(200).json({ invites })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+export async function cancelPendingWorkspaceInviteHandler(req, res, next) {
+  try {
+    if (!isWorkspaceOwner(req)) {
+      return res.status(403).json({ message: 'Only the workspace owner can cancel invites.' })
+    }
+    const workspaceId = req.user?.workspaceId
+    const { inviteId } = req.params
+    if (!inviteId) {
+      return res.status(400).json({ message: 'Missing inviteId.' })
+    }
+    const result = await cancelPendingTeamInvite(inviteId, workspaceId)
+    if (!result.ok) {
+      return res.status(result.statusCode).json({ message: result.message })
+    }
+    return res.status(200).json({ message: 'Invite cancelled.' })
+  } catch (error) {
+    return next(error)
+  }
+}
+
 export async function updateUserHandler(req, res, next) {
   try {
-    const workspaceId = req.user?.workspaceId
     const { userId } = req.params
+    if (String(userId) !== String(req.user?.id)) {
+      return res.status(403).json({ message: 'You can only update your own profile.' })
+    }
+    const workspaceId = req.user?.workspaceId
     const name = req.body?.name !== undefined ? String(req.body.name).trim() : undefined
     const email =
       req.body?.email !== undefined ? String(req.body.email).trim().toLowerCase() : undefined
@@ -95,15 +185,29 @@ export async function updateUserHandler(req, res, next) {
 export async function deleteUserHandler(req, res, next) {
   try {
     const workspaceId = req.user?.workspaceId
+    const actorId = req.user?.id
     const { userId } = req.params
-    const deleted = await deleteUser(userId, workspaceId)
-    if (!deleted) {
-      return res.status(404).json({ message: 'User not found.' })
+    const isSelf = String(userId) === String(actorId)
+    const result = await removeMemberFromWorkspace(userId, workspaceId, actorId)
+    if (!result.ok) {
+      return res.status(result.statusCode).json({ message: result.message })
     }
-    return res.status(200).json({ message: 'User deleted.' })
+    const message = isSelf
+      ? 'You left the workspace. Your account is unchanged.'
+      : 'Member removed from your team. Their account still exists.'
+    return res.status(200).json({
+      message,
+      user: result.user,
+    })
   } catch (error) {
     return next(error)
   }
+}
+
+function isWorkspaceOwner(req) {
+  const id = req.user?.id
+  const ws = req.user?.workspaceId
+  return Boolean(id && ws && String(id) === String(ws))
 }
 
 function isValidAvatarValue(value) {

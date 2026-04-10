@@ -1,7 +1,7 @@
 import { UserModel } from '../models/user-model.js'
 import { env } from '../config/env.js'
 import { hashPassword } from './password-service.js'
-import { unassignUserFromAllTasks } from './task-service.js'
+import { unassignUserFromTasksInWorkspace } from './task-service.js'
 
 const defaultUsers = [
   { name: 'Alex Morgan', email: 'alex@company.com' },
@@ -112,6 +112,62 @@ export async function createUser(payload) {
   return user.toJSON()
 }
 
+/**
+ * Team invite: create a new user, or attach an existing account to this workspace.
+ * Email stays globally unique (one login per email). Password is unchanged when joining.
+ *
+ * Note: each user has one `workspaceId`. Accepting an invite moves them into the
+ * inviter’s workspace. Listing multiple teams at once for the same login would
+ * need a separate membership model (not implemented here).
+ */
+export async function inviteUserToWorkspace(payload, workspaceId, actorUserId) {
+  const email = String(payload.email).trim().toLowerCase()
+  const name = String(payload.name).trim()
+  const ws = normalizeWorkspaceId(workspaceId)
+  const actorId = String(actorUserId ?? '')
+
+  if (!ws) {
+    return { ok: false, statusCode: 400, message: 'Workspace is missing for the current user.' }
+  }
+
+  const existing = await UserModel.findOne({ email })
+  if (!existing) {
+    const user = await createUser({
+      name,
+      email,
+      avatarUrl: payload.avatarUrl,
+      workspaceId: ws,
+    })
+    return { ok: true, statusCode: 201, user, outcome: 'created' }
+  }
+
+  const existingId = existing._id.toString()
+  if (existingId === actorId) {
+    return {
+      ok: false,
+      statusCode: 400,
+      message: 'You cannot invite the account you are logged in with.',
+    }
+  }
+
+  if (String(existing.workspaceId ?? '') === ws) {
+    return {
+      ok: false,
+      statusCode: 409,
+      message: 'This user is already on your team.',
+    }
+  }
+
+  existing.name = name
+  if (payload.avatarUrl !== undefined && String(payload.avatarUrl).trim() !== '') {
+    existing.avatarUrl = String(payload.avatarUrl).trim()
+  }
+  existing.workspaceId = ws
+  await existing.save()
+
+  return { ok: true, statusCode: 200, user: existing.toJSON(), outcome: 'joined' }
+}
+
 export async function updateUser(userId, payload, workspaceId) {
   const update = {}
   if (payload.name !== undefined) update.name = payload.name
@@ -168,14 +224,52 @@ export async function getUserByPasswordResetToken(tokenHash) {
   return { ...raw, id: raw._id.toString() }
 }
 
-export async function deleteUser(userId, workspaceId) {
-  const query = { _id: userId }
-  const workspace = normalizeWorkspaceId(workspaceId)
-  if (workspace) {
-    query.workspaceId = workspace
+/**
+ * Detach a user from the shared workspace (solo workspaceId = their id). Does not delete the User.
+ * - Only the workspace owner (actor id === workspace root id) may remove someone else.
+ * - The workspace root user row cannot be removed by others.
+ * - A non-owner member may only detach themselves ("leave"); the owner cannot leave via this path.
+ */
+export async function removeMemberFromWorkspace(userId, workspaceId, actorUserId) {
+  const ws = normalizeWorkspaceId(workspaceId)
+  const actor = String(actorUserId ?? '')
+  if (!ws) return { ok: false, statusCode: 400, message: 'Workspace is missing.' }
+
+  const actorIsOwner = actor === ws
+  const targetIsWorkspaceRoot = String(userId) === ws
+
+  if (String(userId) !== actor) {
+    if (!actorIsOwner) {
+      return {
+        ok: false,
+        statusCode: 403,
+        message: 'Only the workspace owner can remove other members.',
+      }
+    }
+    if (targetIsWorkspaceRoot) {
+      return {
+        ok: false,
+        statusCode: 400,
+        message: 'Cannot remove the workspace owner from the team.',
+      }
+    }
+  } else if (actorIsOwner) {
+    return {
+      ok: false,
+      statusCode: 400,
+      message: 'Workspace owner cannot leave their team this way.',
+    }
   }
-  const user = await UserModel.findOneAndDelete(query)
-  if (!user) return false
-  await unassignUserFromAllTasks(userId)
-  return true
+
+  const user = await UserModel.findOne({ _id: userId, workspaceId: ws })
+  if (!user) {
+    return { ok: false, statusCode: 404, message: 'User not found in this workspace.' }
+  }
+
+  await unassignUserFromTasksInWorkspace(userId, ws)
+
+  user.workspaceId = user._id
+  await user.save()
+
+  return { ok: true, user: user.toJSON() }
 }

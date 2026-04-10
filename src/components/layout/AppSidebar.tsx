@@ -8,11 +8,15 @@ import {
   UserCircle2,
   Users,
 } from 'lucide-react'
+import { useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
 
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
+import { isWorkspaceOwnerUser } from '@/lib/workspace-role'
+import { useAuthStore } from '@/store/auth-store'
+import { useTaskStore } from '@/store/task-store'
 
 const nav = [
   { icon: LayoutDashboard, label: 'Dashboard', to: '/dashboard' },
@@ -27,6 +31,13 @@ type AppSidebarProps = {
 }
 
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
+  const currentUser = useAuthStore((s) => s.currentUser)
+  const teamUsers = useTaskStore((s) => s.users)
+  const isWorkspaceOwner = useMemo(
+    () => isWorkspaceOwnerUser(currentUser, teamUsers),
+    [currentUser, teamUsers]
+  )
+
   return (
     <div className="flex h-full flex-col border-r border-white/10 bg-sidebar/70 py-6 shadow-[inset_-1px_0_0_rgba(255,255,255,0.06)] backdrop-blur-2xl">
       <div className="px-5">
@@ -103,16 +114,18 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
               <CheckSquare className="size-3.5" />
               New task
             </NavLink>
-            <NavLink
-              to="/team"
-              onClick={onNavigate}
-              className={cn(
-                'inline-flex w-full items-center gap-2 rounded-lg border border-white/10 bg-white/6 px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-white/10'
-              )}
-            >
-              <Users className="size-3.5" />
-              Invite user
-            </NavLink>
+            {isWorkspaceOwner ? (
+              <NavLink
+                to="/team"
+                onClick={onNavigate}
+                className={cn(
+                  'inline-flex w-full items-center gap-2 rounded-lg border border-white/10 bg-white/6 px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-white/10'
+                )}
+              >
+                <Users className="size-3.5" />
+                Invite user
+              </NavLink>
+            ) : null}
             <NavLink
               to="/profile"
               onClick={onNavigate}

@@ -79,3 +79,11 @@ export async function unassignUserFromAllTasks(userId) {
     { $pull: { assignedTo: userId } }
   )
 }
+
+export async function unassignUserFromTasksInWorkspace(userId, workspaceId) {
+  if (!userId || !workspaceId) return
+  await TaskModel.updateMany(
+    { assignedTo: userId, workspaceId },
+    { $pull: { assignedTo: userId } }
+  )
+}
