@@ -12,7 +12,7 @@ A modern, workspace-based task management app with a premium glassmorphism UI, s
 - Profile management (name, email, avatar)
 - Avatar upload with crop + zoom before saving
 - Task CRUD with status management and assignee support
-- Team management (invite/edit/delete users)
+- Team management (invite/edit/remove members from workspace — accounts are not deleted)
 - Real-time-ready Novu inbox bell and notifications page
 - Global search, filters, sorting, and polished dark glass UI
 
@@ -180,7 +180,7 @@ Base URL: `http://localhost:4000/api`
 - `GET /users`
 - `POST /users`
 - `PATCH /users/:userId`
-- `DELETE /users/:userId`
+- `DELETE /users/:userId` — removes member from your workspace only (account remains; they get a solo workspace)
 - `GET /users/:userId/novu-auth`
 
 ### Notifications

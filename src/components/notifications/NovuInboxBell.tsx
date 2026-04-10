@@ -1,6 +1,7 @@
 import { Inbox } from '@novu/react'
 import { Bell } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { fetchNovuSubscriberAuthApi } from '@/services/task-api'
@@ -19,6 +20,7 @@ type SubscriberConfig = {
 }
 
 export function NovuInboxBell() {
+  const navigate = useNavigate()
   const currentUser = useAuthStore((s) => s.currentUser)
   const [subscriberConfig, setSubscriberConfig] = useState<SubscriberConfig | null>(null)
   const [hasAuthError, setHasAuthError] = useState(false)
@@ -89,6 +91,15 @@ export function NovuInboxBell() {
       socketOptions={{ socketType: 'self-hosted' }}
       placement="bottom-end"
       placementOffset={10}
+      routerPush={(url) => {
+        navigate(url)
+      }}
+      onNotificationClick={(notification) => {
+        const inviteId = extractTeamInviteIdFromNovuNotification(notification)
+        if (inviteId) {
+          navigate(`/notifications?teamInvite=${encodeURIComponent(inviteId)}`)
+        }
+      }}
       appearance={{
         variables: {
           colorPrimary: '#A78BFA',
@@ -148,4 +159,44 @@ function normalizeSocketUrl(value: string): string {
   if (value.startsWith('ws://')) return value.replace('ws://', 'http://')
   if (value.startsWith('wss://')) return value.replace('wss://', 'https://')
   return value
+}
+
+/** Novu inbox passes `data` (sometimes stringified) for workflow payload. */
+function parseNovuDataField(raw: unknown): Record<string, unknown> | null {
+  if (raw == null) return null
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw) as unknown
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>
+      }
+    } catch {
+      return null
+    }
+    return null
+  }
+  if (typeof raw === 'object' && !Array.isArray(raw)) {
+    return raw as Record<string, unknown>
+  }
+  return null
+}
+
+function extractTeamInviteIdFromNovuNotification(notification: unknown): string | null {
+  if (!notification || typeof notification !== 'object') return null
+  const n = notification as Record<string, unknown>
+  const data = parseNovuDataField(n.data) ?? parseNovuDataField(n.payload)
+  if (!data) return null
+
+  const nested = data.payload
+  const payload =
+    nested && typeof nested === 'object' && !Array.isArray(nested)
+      ? (nested as Record<string, unknown>)
+      : data
+
+  if (payload.type !== 'team-invite') return null
+  const required = payload.actionRequired
+  if (required === false || required === 'false') return null
+
+  const inviteId = payload.inviteId
+  return typeof inviteId === 'string' && inviteId.length > 0 ? inviteId : null
 }

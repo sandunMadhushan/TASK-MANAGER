@@ -246,8 +246,8 @@ export async function updateUserApi(userId: string, input: UserInput): Promise<U
   })
 }
 
-export async function deleteUserApi(userId: string): Promise<void> {
-  await request<{ message: string }>(`/users/${userId}`, {
+export async function deleteUserApi(userId: string): Promise<{ message: string }> {
+  return request<{ message: string }>(`/users/${userId}`, {
     method: 'DELETE',
   })
 }
@@ -274,6 +274,19 @@ export type NotificationFeedItem = {
   body?: string
   createdAt?: string
   isRead?: boolean
+  payload?: Record<string, unknown>
+}
+
+export type TeamInviteItem = {
+  id: string
+  workspaceId?: string
+  inviterUserId?: string
+  inviterName: string
+  inviterEmail: string
+  targetUserId?: string
+  targetEmail: string
+  status: 'pending' | 'accepted' | 'declined'
+  createdAt?: string
 }
 
 export async function fetchNotificationFeedApi(
@@ -295,4 +308,32 @@ export async function markAllNotificationsReadApi(subscriberId: string): Promise
     method: 'POST',
   })
   return typeof result.updated === 'number' ? result.updated : 0
+}
+
+export async function fetchTeamInvitesApi(): Promise<TeamInviteItem[]> {
+  const result = await request<{ invites: TeamInviteItem[] }>('/notifications/team-invites')
+  return Array.isArray(result.invites) ? result.invites : []
+}
+
+export async function fetchWorkspacePendingInvitesApi(): Promise<TeamInviteItem[]> {
+  const result = await request<{ invites: TeamInviteItem[] }>('/users/pending-invites')
+  return Array.isArray(result.invites) ? result.invites : []
+}
+
+export async function cancelWorkspacePendingInviteApi(inviteId: string): Promise<void> {
+  await request<{ message: string }>(`/users/pending-invites/${inviteId}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function acceptTeamInviteApi(inviteId: string): Promise<void> {
+  await request<{ message: string }>(`/notifications/team-invites/${inviteId}/accept`, {
+    method: 'POST',
+  })
+}
+
+export async function declineTeamInviteApi(inviteId: string): Promise<void> {
+  await request<{ message: string }>(`/notifications/team-invites/${inviteId}/decline`, {
+    method: 'POST',
+  })
 }
