@@ -196,6 +196,10 @@ Base URL: `http://localhost:4000/api`
 - Users only see tasks relevant to them (created by or assigned to them) within workspace
 - Assignment validation is workspace-bound
 
+## Hosting (internet deploy)
+
+Step-by-step deployment guides — including **using a separate Git branch** and keeping **local `.env` unchanged** for localhost — are in [`docs/deployment/`](./docs/deployment/README.md). For updating production after you commit to `master`/`main`, see [`docs/deployment/08-master-to-deployment-workflow.md`](./docs/deployment/08-master-to-deployment-workflow.md).
+
 ## Production Notes
 
 - Use a strong, private `AUTH_JWT_SECRET`

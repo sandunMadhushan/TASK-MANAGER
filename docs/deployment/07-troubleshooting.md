@@ -1,0 +1,83 @@
+# 7 — Troubleshooting
+
+## CORS errors in the browser
+
+**Symptom:** Console shows blocked by CORS; API works in Postman.
+
+**Fix:**
+
+- Set `CLIENT_ORIGIN` on the **backend** to the **exact** frontend origin: `https://your-app.vercel.app` (scheme + host, no trailing path).
+- No wildcards in this app’s current `cors({ origin: env.clientOrigin })` — one origin string.
+- Redeploy backend after changing env.
+
+## API returns 401 for everything from the site
+
+**Symptom:** Login or tasks fail with unauthorized.
+
+**Checks:**
+
+- `VITE_API_URL` on Vercel must point to the **same** API you configured (correct `/api` suffix).
+- Token storage: clear site data and log in again.
+- Server `AUTH_JWT_SECRET` must be set; changing it **invalidates** all old tokens.
+
+## `VITE_API_URL` wrong after deploy
+
+**Symptom:** Requests go to localhost or old URL.
+
+**Cause:** Vite bakes `VITE_*` at **build** time.
+
+**Fix:** Change variable in Vercel → **Redeploy** frontend.
+
+## Render: server crashes on start
+
+**Symptom:** Logs say missing `MONGODB_URI` or `AUTH_JWT_SECRET`.
+
+**Fix:** Add both in Render **Environment**; redeploy.
+
+## MongoDB connection failed
+
+**Symptom:** Mongoose errors in Render logs.
+
+**Checks:**
+
+- Atlas **Network Access** allows `0.0.0.0/0` (or Render egress IPs if you restricted).
+- User/password correct in URI; special characters URL-encoded.
+- Cluster is not paused (Atlas free tier can pause after inactivity — resume in dashboard).
+
+## Free tier: first load very slow
+
+**Symptom:** 30–60s wait, then app works.
+
+**Cause:** Render free tier **spins down** when idle.
+
+**Mitigation:** Upgrade to paid always-on, or accept delay for demos.
+
+## Avatar / file uploads disappear after redeploy
+
+**Symptom:** Images worked, then vanished after new deploy.
+
+**Cause:** Many PaaS **filesystems are ephemeral**; uploaded files are not kept on disk long-term.
+
+**Long-term fix:** Store avatars in **object storage** (S3, R2, Cloudinary). That requires a **code change** later — not covered by “zero code change” deploy; this doc only warns you.
+
+## Novu: no email or inbox empty
+
+**Checks:**
+
+- Workflow **published**
+- Workflow ID matches env on Render
+- Provider not stuck in sandbox
+- `NOVU_API_KEY` correct for **cloud** project
+- Frontend `VITE_NOVU_*` use production URLs and were set **before** last successful build
+
+## Password reset link goes to localhost
+
+**Cause:** `CLIENT_ORIGIN` on Render still `http://localhost:5173`.
+
+**Fix:** Set to production frontend URL; trigger new reset email.
+
+## Branch deploy shows old code
+
+**Cause:** Production branch not updated from `main`.
+
+**Fix:** `git checkout your-deploy-branch && git merge main && git push`
