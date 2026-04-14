@@ -10,7 +10,7 @@ import {
 } from '../services/user-service.js'
 import { env } from '../config/env.js'
 import { hashPassword, verifyPassword } from '../services/password-service.js'
-import { notifyPasswordReset } from '../services/notification-service.js'
+import { notifyPasswordReset, notifyWelcome } from '../services/notification-service.js'
 import crypto from 'crypto'
 
 export async function loginHandler(req, res, next) {
@@ -80,6 +80,14 @@ export async function signupHandler(req, res, next) {
 
     const passwordHash = await hashPassword(password)
     const user = await createUser({ name, email, passwordHash })
+    await runNotificationSafely(() =>
+      notifyWelcome(user, {
+        name: user.name,
+        email: user.email,
+        message: `Welcome to Nexus Tasks, ${user.name}! Your workspace is ready.`,
+        appUrl: env.clientOrigin.replace(/\/$/, ''),
+      })
+    )
     const accessToken = signAccessToken(user)
     return res.status(201).json({ accessToken, user })
   } catch (error) {
@@ -189,5 +197,13 @@ function isStrongPassword(value) {
   const hasNumber = /[0-9]/.test(value)
   const hasSymbol = /[^A-Za-z0-9]/.test(value)
   return hasUpper && hasLower && hasNumber && hasSymbol
+}
+
+async function runNotificationSafely(notify) {
+  try {
+    await notify()
+  } catch (error) {
+    console.warn('Notification dispatch failed:', error?.message ?? error)
+  }
 }
 
