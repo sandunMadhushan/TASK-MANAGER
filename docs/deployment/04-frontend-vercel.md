@@ -26,12 +26,12 @@ The frontend is a **Vite** app. Vercel (or Netlify / Cloudflare Pages) builds it
 
 Vite reads variables that start with `VITE_` at **build time**. Set these in Vercel → **Settings → Environment Variables** for **Production** (and Preview if you use previews).
 
-| Variable | Example | Purpose |
-|----------|---------|---------|
-| `VITE_API_URL` | `https://your-api-domain.com/api` | All REST calls from the browser |
-| `VITE_NOVU_APPLICATION_IDENTIFIER` | From Novu Cloud | Inbox / bell |
-| `VITE_NOVU_BACKEND_URL` | Novu’s **hosted** backend URL for your region | Novu React SDK |
-| `VITE_NOVU_SOCKET_URL` | Novu’s **WebSocket** URL for your region | Realtime inbox |
+| Variable                           | Example                                       | Purpose                         |
+| ---------------------------------- | --------------------------------------------- | ------------------------------- |
+| `VITE_API_URL`                     | `https://your-api-domain.com/api`             | All REST calls from the browser |
+| `VITE_NOVU_APPLICATION_IDENTIFIER` | From Novu Cloud                               | Inbox / bell                    |
+| `VITE_NOVU_BACKEND_URL`            | Novu’s **hosted** backend URL for your region | Novu React SDK                  |
+| `VITE_NOVU_SOCKET_URL`             | Novu’s **WebSocket** URL for your region      | Realtime inbox                  |
 
 Exact Novu values come from [06-novu-production.md](./06-novu-production.md). If you skip Novu in production, inbox features may not work until these are set.
 
@@ -43,8 +43,6 @@ Exact Novu values come from [06-novu-production.md](./06-novu-production.md). If
 2. Open the **.vercel.app** URL (or your custom domain).
 3. Try **sign up / login**. If requests fail, open browser **DevTools → Network** and check CORS / 404 / wrong API URL.
 
-<<<<<<< Updated upstream
-=======
 ## SPA refresh routing (important)
 
 For React Router pages (`/dashboard`, `/team`, `/tasks/...`), direct refresh must rewrite to `index.html`.
@@ -60,7 +58,6 @@ If refresh still shows `404: NOT_FOUND`, confirm:
 2. It is included in the deployed commit/branch.
 3. You triggered a fresh redeploy after adding it.
 
->>>>>>> Stashed changes
 ## Sync with backend CORS
 
 On your backend environment, set `CLIENT_ORIGIN` to your **exact** Vercel production URL, e.g.:
@@ -77,11 +74,8 @@ Reset emails use `CLIENT_ORIGIN` on the server to build `https://your-frontend/r
 
 ## Checklist
 
-- [ ] `VITE_API_URL` ends with `/api` (matches local default pattern)  
-- [ ] Production deployment succeeded  
-<<<<<<< Updated upstream
-=======
-- [ ] SPA rewrite is active (`vercel.json`) so page refresh does not 404  
->>>>>>> Stashed changes
-- [ ] `CLIENT_ORIGIN` on backend matches this frontend URL  
-- [ ] Redeploy frontend after any `VITE_*` change  
+- [ ] `VITE_API_URL` ends with `/api` (matches local default pattern)
+- [ ] Production deployment succeeded
+- [ ] SPA rewrite is active (`vercel.json`) so page refresh does not 404
+- [ ] `CLIENT_ORIGIN` on backend matches this frontend URL
+- [ ] Redeploy frontend after any `VITE_*` change
