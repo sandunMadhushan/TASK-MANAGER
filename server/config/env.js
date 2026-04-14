@@ -14,6 +14,7 @@ export const env = {
   novuWorkflowTaskCompleted: process.env.NOVU_WORKFLOW_TASK_COMPLETED ?? '',
   novuWorkflowDeadlineNear: process.env.NOVU_WORKFLOW_DEADLINE_NEAR ?? '',
   novuWorkflowPasswordReset: process.env.NOVU_WORKFLOW_PASSWORD_RESET ?? '',
+  novuWorkflowWelcome: process.env.NOVU_WORKFLOW_WELCOME ?? '',
   novuWorkflowTeamInviteSent: process.env.NOVU_WORKFLOW_TEAM_INVITE_SENT ?? '',
   novuWorkflowTeamInviteAccepted: process.env.NOVU_WORKFLOW_TEAM_INVITE_ACCEPTED ?? '',
   novuWorkflowTeamInviteDeclined: process.env.NOVU_WORKFLOW_TEAM_INVITE_DECLINED ?? '',

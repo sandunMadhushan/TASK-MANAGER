@@ -77,6 +77,15 @@ export async function notifyPasswordReset(user, payload) {
   })
 }
 
+export async function notifyWelcome(user, payload) {
+  if (!env.novuWorkflowWelcome || !canSend(env.novuWorkflowWelcome) || !user) return
+  await triggerForUsers({
+    workflowId: env.novuWorkflowWelcome,
+    users: [user],
+    payload,
+  })
+}
+
 export async function notifyTeamInviteSent(inviteeUser, payload) {
   if (!env.novuWorkflowTeamInviteSent || !inviteeUser) return
   await triggerForUsers({
