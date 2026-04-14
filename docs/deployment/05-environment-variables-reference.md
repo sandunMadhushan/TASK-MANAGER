@@ -21,6 +21,7 @@ You do **not** need to change your local `.env` if you set these only on your ba
 | `NOVU_WORKFLOW_TASK_COMPLETED` | For Novu | |
 | `NOVU_WORKFLOW_DEADLINE_NEAR` | For Novu | |
 | `NOVU_WORKFLOW_PASSWORD_RESET` | For Novu | |
+| `NOVU_WORKFLOW_WELCOME` | For Novu | Welcome notification sent right after signup |
 | `VITE_NOVU_APPLICATION_IDENTIFIER` | For Novu subscriber JWT | Also used in `server/config/env.js` — backend reads this name for Novu app id |
 
 Check `server/config/env.js` if you add new env vars in the future.

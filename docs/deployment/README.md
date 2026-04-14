@@ -23,6 +23,7 @@ Read in order:
 | 6 | [`06-novu-production.md`](./06-novu-production.md) | Notifications in the cloud |
 | 7 | [`07-troubleshooting.md`](./07-troubleshooting.md) | Common failures |
 | 8 | [`08-master-to-deployment-workflow.md`](./08-master-to-deployment-workflow.md) | **Daily Git flow:** push docs to `deployment`, then keep it updated from `master` |
+| 9 | [`09-novu-workflow-content.md`](./09-novu-workflow-content.md) | Copy/paste Subject, Body, Redirect for all Novu workflows |
 
 You can swap **AWS EC2 ↔ Render ↔ Railway ↔ Fly.io** or **Vercel ↔ Netlify ↔ Cloudflare Pages** if you prefer; the **concepts** (env vars, CORS, build-time `VITE_*`) stay the same.
 
