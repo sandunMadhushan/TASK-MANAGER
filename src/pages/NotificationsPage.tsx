@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { NOVU_NOTIFICATIONS_UPDATED_EVENT } from '@/lib/novu-events'
 import {
   acceptTeamInviteApi,
   declineTeamInviteApi,
@@ -36,9 +37,11 @@ export function NotificationsPage() {
 
   const subscriberId = useMemo(() => currentUser?.id ?? null, [currentUser])
 
-  async function loadData() {
+  async function loadData(options?: { quiet?: boolean; skipLoading?: boolean }) {
     if (!subscriberId) return
-    setIsLoading(true)
+    if (!options?.skipLoading) {
+      setIsLoading(true)
+    }
     try {
       const [feed, unread] = await Promise.all([
         fetchNotificationFeedApi(subscriberId, { limit: 12 }),
@@ -73,15 +76,50 @@ export function NotificationsPage() {
         }
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to load notifications.'
-      toast.error('Failed to load notifications', { description: message })
+      if (!options?.quiet) {
+        const message = error instanceof Error ? error.message : 'Unable to load notifications.'
+        toast.error('Failed to load notifications', { description: message })
+      }
     } finally {
-      setIsLoading(false)
+      if (!options?.skipLoading) {
+        setIsLoading(false)
+      }
     }
   }
 
   useEffect(() => {
     void loadData()
+  }, [subscriberId])
+
+  useEffect(() => {
+    if (!subscriberId) return
+    const onFocus = () => {
+      void loadData({ quiet: true, skipLoading: true })
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void loadData({ quiet: true, skipLoading: true })
+      }
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [subscriberId])
+
+  useEffect(() => {
+    if (!subscriberId) return
+    const onNovuUpdated = (event: Event) => {
+      const custom = event as CustomEvent<{ subscriberId?: string; unreadCount?: number }>
+      if (custom.detail?.subscriberId !== subscriberId) return
+      void loadData({ quiet: true, skipLoading: true })
+    }
+    window.addEventListener(NOVU_NOTIFICATIONS_UPDATED_EVENT, onNovuUpdated as EventListener)
+    return () => {
+      window.removeEventListener(NOVU_NOTIFICATIONS_UPDATED_EVENT, onNovuUpdated as EventListener)
+    }
   }, [subscriberId])
 
   async function markAllRead() {

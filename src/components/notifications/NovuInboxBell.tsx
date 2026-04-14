@@ -1,9 +1,10 @@
 import { Inbox } from '@novu/react'
 import { Bell } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
+import { emitNovuNotificationsUpdated } from '@/lib/novu-events'
 import { fetchNovuSubscriberAuthApi } from '@/services/task-api'
 import { useAuthStore } from '@/store/auth-store'
 
@@ -25,6 +26,7 @@ export function NovuInboxBell() {
   const [subscriberConfig, setSubscriberConfig] = useState<SubscriberConfig | null>(null)
   const [hasAuthError, setHasAuthError] = useState(false)
   const currentUserId = useMemo(() => currentUser?.id ?? null, [currentUser])
+  const lastUnreadRef = useRef<number | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -64,6 +66,16 @@ export function NovuInboxBell() {
     if (!subscriberConfig) return 'novu-inbox-anon'
     return `novu-inbox-${subscriberConfig.subscriberId}-${subscriberConfig.subscriberHash ?? 'nohash'}`
   }, [subscriberConfig])
+
+  function syncUnreadBroadcast(unreadCount: number) {
+    if (!subscriberConfig?.subscriberId) return
+    if (lastUnreadRef.current === unreadCount) return
+    lastUnreadRef.current = unreadCount
+    emitNovuNotificationsUpdated({
+      subscriberId: subscriberConfig.subscriberId,
+      unreadCount,
+    })
+  }
 
   if (!configured || hasAuthError) {
     return (
@@ -110,6 +122,7 @@ export function NovuInboxBell() {
       renderBell={(unreadCount) => (
         (() => {
           const effectiveUnread = getUnreadCount(unreadCount)
+          syncUnreadBroadcast(effectiveUnread)
 
           return (
             <Button
