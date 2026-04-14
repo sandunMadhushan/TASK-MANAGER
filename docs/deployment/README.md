@@ -17,14 +17,14 @@ Read in order:
 | 0 | [`00-git-branch-strategy.md`](./00-git-branch-strategy.md) | **Using a branch only (no merge to main)** — does it work? |
 | 1 | [`01-overview-and-accounts.md`](./01-overview-and-accounts.md) | Big picture, what you will create |
 | 2 | [`02-mongodb-atlas.md`](./02-mongodb-atlas.md) | Free database |
-| 3 | [`03-backend-render.md`](./03-backend-render.md) | Express API on Render (example) |
+| 3 | [`03-backend-render.md`](./03-backend-render.md) | Express API on AWS Free Tier (EC2) |
 | 4 | [`04-frontend-vercel.md`](./04-frontend-vercel.md) | Vite build on Vercel (example) |
 | 5 | [`05-environment-variables-reference.md`](./05-environment-variables-reference.md) | Full env checklist for dashboards |
 | 6 | [`06-novu-production.md`](./06-novu-production.md) | Notifications in the cloud |
 | 7 | [`07-troubleshooting.md`](./07-troubleshooting.md) | Common failures |
 | 8 | [`08-master-to-deployment-workflow.md`](./08-master-to-deployment-workflow.md) | **Daily Git flow:** push docs to `deployment`, then keep it updated from `master` |
 
-You can swap **Render ↔ Railway ↔ Fly.io** or **Vercel ↔ Netlify ↔ Cloudflare Pages** if you prefer; the **concepts** (env vars, CORS, build-time `VITE_*`) stay the same.
+You can swap **AWS EC2 ↔ Render ↔ Railway ↔ Fly.io** or **Vercel ↔ Netlify ↔ Cloudflare Pages** if you prefer; the **concepts** (env vars, CORS, build-time `VITE_*`) stay the same.
 
 ## After deployment
 

@@ -11,7 +11,7 @@ This file is the **day-to-day Git story**: where you commit after localhost test
 | Branch | Purpose |
 |--------|--------|
 | **`master`** (or `main`) | Normal development. You test on **localhost**, commit and push here. This is your **source of truth** for app code. |
-| **`deployment`** | Same app as `master`, plus anything you only want on the deploy line (e.g. `docs/deployment/`). **Render / Vercel** are configured to build **this** branch for production. |
+| **`deployment`** | Same app as `master`, plus anything you only want on the deploy line (e.g. `docs/deployment/`). **AWS backend deploy flow / Vercel** are configured from this branch for production. |
 
 You **can** put deployment docs only on `deployment` and never merge `deployment` → `master`. You **still** bring new app code **from** `master` **into** `deployment` whenever you want production updated.
 
@@ -57,7 +57,7 @@ git commit -m "Add deployment documentation"
 git push -u origin deployment
 ```
 
-Then in **Render** and **Vercel**, set **Production branch** to **`deployment`**.
+Then in your backend deploy flow and **Vercel**, set **Production branch/source** to **`deployment`**.
 
 ### Option B — You already have `deployment`; you only need to push
 
@@ -94,7 +94,7 @@ git push origin master
 
 ### 3. When you want **production** to match `master`
 
-Only do this when you are ready for Render/Vercel to rebuild with the new code (e.g. right before or after you finish deployment setup).
+Only do this when you are ready for backend/Vercel to rebuild with the new code (e.g. right before or after you finish deployment setup).
 
 ```bash
 git checkout deployment
@@ -106,7 +106,7 @@ git push origin deployment
 What happens next:
 
 - GitHub’s `deployment` branch moves forward to include everything from `master` (plus whatever was already only on `deployment`, like extra docs).
-- If **auto-deploy** is on, Render and Vercel start new builds from `deployment`.
+- If **auto-deploy** is on, backend and Vercel start new builds from `deployment`.
 
 ### 4. Go back to normal coding on `master`
 
@@ -148,11 +148,11 @@ Rare if only `deployment` has extra files under `docs/deployment/` and you never
 - [ ] Localhost tests passed for those changes.
 - [ ] On `deployment`: `git merge master` completed without unresolved conflicts.
 - [ ] `git push origin deployment` succeeded.
-- [ ] Watch Render/Vercel dashboards for a successful build (first time: env vars already set — see other guides).
+- [ ] Watch backend/Vercel logs for a successful build (first time: env vars already set — see other guides).
 
 ---
 
 ## Related docs
 
-- [00-git-branch-strategy.md](./00-git-branch-strategy.md) — why a non-default branch works with Vercel/Render.
+- [00-git-branch-strategy.md](./00-git-branch-strategy.md) — why a non-default branch works with Vercel/any backend host.
 - [README.md](./README.md) — full deployment guide index.

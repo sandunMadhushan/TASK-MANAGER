@@ -1,13 +1,13 @@
 # 5 — Environment variables reference (dashboards only)
 
 This table maps **`.env.example`** names to **where** you set them in production.  
-You do **not** need to change your local `.env` if you set these only on **Render** and **Vercel**.
+You do **not** need to change your local `.env` if you set these only on your backend host (AWS EC2 in this guide) and **Vercel**.
 
-## Backend (e.g. Render)
+## Backend (e.g. AWS EC2)
 
 | Variable | Required | Notes |
 |----------|----------|--------|
-| `PORT` | Auto | Render sets this; do not override unless you know why. |
+| `PORT` | Recommended | Use a fixed internal app port like `4000` behind Nginx. |
 | `NODE_ENV` | Recommended | `production` |
 | `MONGODB_URI` | **Yes** | Atlas connection string |
 | `CLIENT_ORIGIN` | **Yes** | Public **frontend** URL (`https://....vercel.app`). Used for CORS + password reset links. |
@@ -39,7 +39,7 @@ Check `server/config/env.js` if you add new env vars in the future.
 | Location | Purpose |
 |----------|---------|
 | Laptop `.env` | `localhost` URLs + your dev secrets — **unchanged** if you prefer |
-| Render env | Production API + DB + server Novu + `CLIENT_ORIGIN` |
+| Backend host env (`server/.env.production` on EC2) | Production API + DB + server Novu + `CLIENT_ORIGIN` |
 | Vercel env | Production `VITE_*` baked into static JS |
 
 Same variable **names**, **different values** per environment. No merge conflict on your machine.

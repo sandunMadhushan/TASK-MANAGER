@@ -5,7 +5,7 @@ The frontend is a **Vite** app. Vercel (or Netlify / Cloudflare Pages) builds it
 ## Prerequisites
 
 - GitHub repo connected to Vercel.
-- You know your **backend** public URL, e.g. `https://your-api.onrender.com`.
+- You know your **backend** public URL, e.g. `https://your-api-domain.com`.
 - You chose a **production branch** (can be non-`main` — see [00-git-branch-strategy.md](./00-git-branch-strategy.md)).
 
 ## Create a Vercel project
@@ -28,7 +28,7 @@ Vite reads variables that start with `VITE_` at **build time**. Set these in Ver
 
 | Variable | Example | Purpose |
 |----------|---------|---------|
-| `VITE_API_URL` | `https://your-api.onrender.com/api` | All REST calls from the browser |
+| `VITE_API_URL` | `https://your-api-domain.com/api` | All REST calls from the browser |
 | `VITE_NOVU_APPLICATION_IDENTIFIER` | From Novu Cloud | Inbox / bell |
 | `VITE_NOVU_BACKEND_URL` | Novu’s **hosted** backend URL for your region | Novu React SDK |
 | `VITE_NOVU_SOCKET_URL` | Novu’s **WebSocket** URL for your region | Realtime inbox |
@@ -43,15 +43,15 @@ Exact Novu values come from [06-novu-production.md](./06-novu-production.md). If
 2. Open the **.vercel.app** URL (or your custom domain).
 3. Try **sign up / login**. If requests fail, open browser **DevTools → Network** and check CORS / 404 / wrong API URL.
 
-## Sync with Render (CORS)
+## Sync with backend CORS
 
-On **Render**, set `CLIENT_ORIGIN` to your **exact** Vercel production URL, e.g.:
+On your backend environment, set `CLIENT_ORIGIN` to your **exact** Vercel production URL, e.g.:
 
 ```text
 https://nexus-tasks.vercel.app
 ```
 
-Use **https**, no path. Then **redeploy** the Render service (or it may auto-redeploy when env changes).
+Use **https**, no path. Then restart/redeploy your backend service so the new CORS value is active.
 
 ## Password reset links
 

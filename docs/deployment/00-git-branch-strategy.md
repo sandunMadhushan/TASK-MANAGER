@@ -16,7 +16,7 @@ So you can:
 1. Create a branch (example name: `deployment` or `production-config`).
 2. Add **only** these `docs/deployment/*.md` files on that branch (optional: nothing else).
 3. Push the branch to GitHub.
-4. In **Vercel**, **Render**, etc., set **Production Branch** (or “deploy branch”) to that branch name instead of `main`.
+4. In **Vercel** and your backend hosting/deploy flow, set **Production Branch** (or source branch) to that branch name instead of `main`.
 
 The platform will **clone that branch** and run **whatever code exists on that branch**. So your app (`src/`, `server/`, `package.json`, …) must be **on that branch too** — which it will be, if you branched from `main` and only added docs (or docs + small config files later).
 

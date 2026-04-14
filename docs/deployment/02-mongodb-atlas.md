@@ -2,7 +2,7 @@
 
 ## Goal
 
-Get a **production** `MONGODB_URI` you will paste into **Render** (backend env), **not** into your local `.env` unless you want to.
+Get a **production** `MONGODB_URI` you will paste into your backend production env (AWS EC2 in this guide), **not** into your local `.env` unless you want to.
 
 ## Steps
 
@@ -10,7 +10,7 @@ Get a **production** `MONGODB_URI` you will paste into **Render** (backend env),
 
 1. Sign in at [MongoDB Atlas](https://cloud.mongodb.com).
 2. Create a **project** (any name).
-3. **Build a database** → choose **M0** (free) → pick a **region** close to your API host (e.g. same as Render region if possible).
+3. **Build a database** → choose **M0** (free) → pick a **region** close to your API host (same AWS region if possible).
 4. Create the cluster (may take a few minutes).
 
 ### 2. Database access (user + password)
@@ -22,7 +22,7 @@ Get a **production** `MONGODB_URI` you will paste into **Render** (backend env),
 ### 3. Network access
 
 1. Left sidebar → **Network Access** → **Add IP Address**.
-2. For a first deploy, **Allow access from anywhere** (`0.0.0.0/0`) is common so Render’s dynamic IPs work.  
+2. For a first deploy, **Allow access from anywhere** (`0.0.0.0/0`) is common while setup is in progress.
    - Tightening to specific IPs is possible but harder on free PaaS.  
    - Always use a **strong** database user password.
 
@@ -44,4 +44,4 @@ Do **not** commit this string to git.
 - [ ] M0 cluster running  
 - [ ] Database user created  
 - [ ] Network access allows your API host to connect  
-- [ ] Full `MONGODB_URI` copied for Render  
+- [ ] Full `MONGODB_URI` copied for backend production env

@@ -28,29 +28,29 @@
 
 **Fix:** Change variable in Vercel → **Redeploy** frontend.
 
-## Render: server crashes on start
+## Backend: server crashes on start
 
 **Symptom:** Logs say missing `MONGODB_URI` or `AUTH_JWT_SECRET`.
 
-**Fix:** Add both in Render **Environment**; redeploy.
+**Fix:** Add both in backend production env; restart backend process.
 
 ## MongoDB connection failed
 
-**Symptom:** Mongoose errors in Render logs.
+**Symptom:** Mongoose errors in backend logs.
 
 **Checks:**
 
-- Atlas **Network Access** allows `0.0.0.0/0` (or Render egress IPs if you restricted).
+- Atlas **Network Access** allows your backend outbound traffic (`0.0.0.0/0` is common to start).
 - User/password correct in URI; special characters URL-encoded.
 - Cluster is not paused (Atlas free tier can pause after inactivity — resume in dashboard).
 
-## Free tier: first load very slow
+## Free tier: API unreachable or timeout
 
 **Symptom:** 30–60s wait, then app works.
 
-**Cause:** Render free tier **spins down** when idle.
+**Cause:** On EC2, this is usually security group / Nginx / PM2 misconfiguration (not auto-sleep).
 
-**Mitigation:** Upgrade to paid always-on, or accept delay for demos.
+**Mitigation:** Verify EC2 inbound ports (`80/443`), PM2 process status, and Nginx proxy target `127.0.0.1:4000`.
 
 ## Avatar / file uploads disappear after redeploy
 
@@ -65,14 +65,14 @@
 **Checks:**
 
 - Workflow **published**
-- Workflow ID matches env on Render
+- Workflow ID matches backend env
 - Provider not stuck in sandbox
 - `NOVU_API_KEY` correct for **cloud** project
 - Frontend `VITE_NOVU_*` use production URLs and were set **before** last successful build
 
 ## Password reset link goes to localhost
 
-**Cause:** `CLIENT_ORIGIN` on Render still `http://localhost:5173`.
+**Cause:** `CLIENT_ORIGIN` on backend still `http://localhost:5173`.
 
 **Fix:** Set to production frontend URL; trigger new reset email.
 
