@@ -11,9 +11,7 @@ import { useAuthStore } from '@/store/auth-store'
 const APP_ID = import.meta.env.VITE_NOVU_APPLICATION_IDENTIFIER as string | undefined
 const BACKEND_URL =
   (import.meta.env.VITE_NOVU_BACKEND_URL as string | undefined) ?? 'http://localhost:5000'
-const RAW_SOCKET_URL =
-  (import.meta.env.VITE_NOVU_SOCKET_URL as string | undefined) ?? 'ws://localhost:3002'
-const SOCKET_URL = normalizeSocketUrl(RAW_SOCKET_URL)
+const SOCKET_URL = (import.meta.env.VITE_NOVU_SOCKET_URL as string | undefined) ?? 'ws://localhost:3002'
 
 type SubscriberConfig = {
   subscriberId: string
@@ -100,7 +98,6 @@ export function NovuInboxBell() {
       subscriberHash={subscriberConfig?.subscriberHash}
       backendUrl={BACKEND_URL}
       socketUrl={SOCKET_URL}
-      socketOptions={{ socketType: 'self-hosted' }}
       placement="bottom-end"
       placementOffset={10}
       routerPush={(url) => {
@@ -166,12 +163,6 @@ function getUnreadCount(value: unknown): number {
 function formatUnreadCount(value: number): string {
   if (value > 99) return '99+'
   return String(value)
-}
-
-function normalizeSocketUrl(value: string): string {
-  if (value.startsWith('ws://')) return value.replace('ws://', 'http://')
-  if (value.startsWith('wss://')) return value.replace('wss://', 'https://')
-  return value
 }
 
 /** Novu inbox passes `data` (sometimes stringified) for workflow payload. */
