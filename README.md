@@ -1,6 +1,12 @@
-# Nexus Tasks
+<h1 align="center">Nexus Tasks</h1>
 
-A modern, workspace-based task management app with a premium glassmorphism UI, secure authentication, profile management, team collaboration, and Novu-powered notifications.
+<p align="center">
+  <img src="./public/logo.png" alt="Nexus Tasks Logo" width="120" />
+</p>
+
+<p align="center">
+  A modern, workspace-based task management app with a premium glassmorphism UI, secure authentication, profile management, team collaboration, and Novu-powered notifications.
+</p>
 
 ## Features
 
@@ -196,6 +202,40 @@ Base URL: `http://localhost:4000/api`
 - Users only see tasks relevant to them (created by or assigned to them) within workspace
 - Assignment validation is workspace-bound
 
+## Hosting (internet deploy)
+
+Step-by-step deployment guides — including **using a separate Git branch** and keeping **local `.env` unchanged** for localhost — are in [`docs/deployment/`](./docs/deployment/README.md). For updating production after you commit to `master`/`main`, see [`docs/deployment/08-master-to-deployment-workflow.md`](./docs/deployment/08-master-to-deployment-workflow.md).
+
+## Deployment (AWS + Vercel + Novu)
+
+Recommended production split:
+
+- **Backend API** on AWS (EC2) running `npm run server:start` with PM2/systemd
+- **Frontend** on Vercel (build output from Vite `dist/`)
+- **Database** on MongoDB Atlas
+- **Notifications + email workflows** on Novu
+
+### Deployment docs map
+
+- Overview/accounts: [`docs/deployment/01-overview-and-accounts.md`](./docs/deployment/01-overview-and-accounts.md)
+- MongoDB Atlas: [`docs/deployment/02-mongodb-atlas.md`](./docs/deployment/02-mongodb-atlas.md)
+- Backend host setup: [`docs/deployment/03-backend-aws.md`](./docs/deployment/03-backend-aws.md)
+- Frontend (Vercel): [`docs/deployment/04-frontend-vercel.md`](./docs/deployment/04-frontend-vercel.md)
+- Env vars reference: [`docs/deployment/05-environment-variables-reference.md`](./docs/deployment/05-environment-variables-reference.md)
+- Novu production setup: [`docs/deployment/06-novu-production.md`](./docs/deployment/06-novu-production.md)
+- Troubleshooting: [`docs/deployment/07-troubleshooting.md`](./docs/deployment/07-troubleshooting.md)
+- Update deployment branch from master/main: [`docs/deployment/08-master-to-deployment-workflow.md`](./docs/deployment/08-master-to-deployment-workflow.md)
+- Novu workflow content (subject/body/redirect): [`docs/deployment/09-novu-workflow-content.md`](./docs/deployment/09-novu-workflow-content.md)
+
+### Production checklist
+
+- Backend env configured (`MONGODB_URI`, `CLIENT_ORIGIN`, `AUTH_*`, `NOVU_*`)
+- Frontend Vercel env configured (`VITE_API_URL`, `VITE_NOVU_*`)
+- `vercel.json` SPA rewrite active (prevents refresh 404 on routes)
+- Novu workflows created and published with matching identifiers
+- Backend restarted after env changes
+- Frontend redeployed after `VITE_*` changes
+
 ## Production Notes
 
 - Use a strong, private `AUTH_JWT_SECRET`
@@ -207,4 +247,3 @@ Base URL: `http://localhost:4000/api`
 ## License
 
 Private project. All rights reserved.
-
