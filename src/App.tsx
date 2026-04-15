@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotificationsPage } from '@/pages/NotificationsPage'
 import { ProfilePage } from '@/pages/ProfilePage'
@@ -36,6 +37,7 @@ function App() {
 
   useEffect(() => {
     const pageTitleByPath: Record<string, string> = {
+      '/': 'Home',
       '/dashboard': 'Dashboard',
       '/tasks': 'Tasks',
       '/team': 'Team',
@@ -59,6 +61,10 @@ function App() {
     <>
       <Routes>
         <Route
+          path="/"
+          element={currentUser ? <Navigate to="/dashboard" replace /> : <HomePage />}
+        />
+        <Route
           path="/login"
           element={currentUser ? <Navigate to="/dashboard" replace /> : <LoginPage />}
         />
@@ -67,26 +73,78 @@ function App() {
           element={currentUser ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />}
         />
         <Route
-          path="/*"
+          path="/dashboard"
           element={
             !currentUser ? (
-              <Navigate to="/login" replace />
+              <Navigate to="/" replace />
             ) : (
               <DashboardLayout>
-                <Routes>
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                  <Route path="/dashboard" element={<DashboardPage />} />
-                  <Route path="/tasks" element={<TasksPage />} />
-                  <Route path="/team" element={<TeamPage />} />
-                  <Route path="/notifications" element={<NotificationsPage />} />
-                  <Route path="/profile" element={<ProfilePage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                </Routes>
+                <DashboardPage />
               </DashboardLayout>
             )
           }
         />
+        <Route
+          path="/tasks"
+          element={
+            !currentUser ? (
+              <Navigate to="/" replace />
+            ) : (
+              <DashboardLayout>
+                <TasksPage />
+              </DashboardLayout>
+            )
+          }
+        />
+        <Route
+          path="/team"
+          element={
+            !currentUser ? (
+              <Navigate to="/" replace />
+            ) : (
+              <DashboardLayout>
+                <TeamPage />
+              </DashboardLayout>
+            )
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            !currentUser ? (
+              <Navigate to="/" replace />
+            ) : (
+              <DashboardLayout>
+                <NotificationsPage />
+              </DashboardLayout>
+            )
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            !currentUser ? (
+              <Navigate to="/" replace />
+            ) : (
+              <DashboardLayout>
+                <ProfilePage />
+              </DashboardLayout>
+            )
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            !currentUser ? (
+              <Navigate to="/" replace />
+            ) : (
+              <DashboardLayout>
+                <SettingsPage />
+              </DashboardLayout>
+            )
+          }
+        />
+        <Route path="*" element={<Navigate to={currentUser ? '/dashboard' : '/'} replace />} />
       </Routes>
       <Toaster />
     </>
