@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, UserPlus } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, ShieldCheck, UserPlus } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -143,8 +143,12 @@ export function LoginPage() {
         <Card className="hidden border-white/10 bg-card/70 shadow-2xl shadow-black/25 backdrop-blur-xl lg:block">
           <CardContent className="flex h-full flex-col justify-between p-8">
             <div>
-              <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-xs text-violet-100">
-                <Sparkles className="size-3.5 text-violet-300" />
+              <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-2 py-1 text-xs text-violet-100">
+                <img
+                  src="/logo.png"
+                  alt="Nexus Tasks logo"
+                  className="size-4 rounded-sm object-cover"
+                />
                 Premium productivity flow
               </p>
               <h1 className="mt-4 font-heading text-3xl font-semibold tracking-tight text-foreground">

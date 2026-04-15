@@ -4,7 +4,6 @@ import {
   CheckSquare,
   LayoutDashboard,
   Settings2,
-  Sparkles,
   UserCircle2,
   Users,
 } from 'lucide-react'
@@ -47,8 +46,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           initial={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="flex size-11 items-center justify-center rounded-2xl bg-linear-to-br from-violet-500/90 to-fuchsia-600/80 text-white shadow-lg shadow-violet-500/25 ring-1 ring-white/20">
-            <Sparkles className="size-5" aria-hidden />
+          <div className="flex size-11 items-center justify-center overflow-hidden rounded-2xl bg-black/30 text-white shadow-lg shadow-violet-500/25 ring-1 ring-white/20">
+            <img
+              src="/logo.png"
+              alt="Nexus Tasks logo"
+              className="size-full object-cover"
+            />
           </div>
           <div className="min-w-0 text-left">
             <p className="truncate font-heading text-base font-semibold tracking-tight text-foreground">

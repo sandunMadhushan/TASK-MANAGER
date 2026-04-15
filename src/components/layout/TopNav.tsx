@@ -52,6 +52,14 @@ export function TopNav({ onMenuClick }: TopNavProps) {
         >
           <Menu className="size-[18px]" />
         </Button>
+        <button
+          type="button"
+          aria-label="Go to dashboard"
+          className="inline-flex items-center justify-center overflow-hidden rounded-lg ring-1 ring-white/15 md:hidden"
+          onClick={() => navigate('/dashboard')}
+        >
+          <img src="/logo.png" alt="Nexus Tasks logo" className="size-8 object-cover" />
+        </button>
 
         <div className="relative min-w-0 flex-1">
           <Search
