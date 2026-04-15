@@ -7,12 +7,13 @@ function normalizeEmail(email) {
 
 export async function createTeamInvite(payload) {
   const workspaceId = String(payload.workspaceId ?? '')
-  const targetUserId = String(payload.targetUserId ?? '')
+  const targetUserIdRaw = payload.targetUserId
+  const targetUserId = targetUserIdRaw ? String(targetUserIdRaw) : null
   const targetEmail = normalizeEmail(payload.targetEmail)
 
   const existingPending = await TeamInviteModel.findOne({
     workspaceId,
-    targetUserId,
+    targetEmail,
     status: 'pending',
   })
   if (existingPending) {

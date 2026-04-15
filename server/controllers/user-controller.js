@@ -1,5 +1,4 @@
 import {
-  createUser,
   getUserByEmail,
   getUsers,
   removeMemberFromWorkspace,
@@ -12,6 +11,7 @@ import {
   getPendingTeamInvitesForWorkspace,
 } from '../services/team-invite-service.js'
 import { notifyTeamInviteSent } from '../services/notification-service.js'
+import { env } from '../config/env.js'
 
 export async function getUsersHandler(req, res, next) {
   try {
@@ -65,8 +65,40 @@ export async function createUserHandler(req, res, next) {
 
     const existing = await getUserByEmail(email)
     if (!existing) {
-      const user = await createUser({ name, email, avatarUrl, workspaceId })
-      return res.status(201).json(user)
+      const { invite, created } = await createTeamInvite({
+        workspaceId,
+        inviterUserId,
+        inviterName,
+        inviterEmail,
+        targetEmail: email,
+      })
+
+      if (created) {
+        await notifyTeamInviteSent(
+          { id: `invite:${email}`, email, name },
+          {
+            type: 'team-invite',
+            actionRequired: true,
+            inviteId: invite.id,
+            inviterName: inviterName ?? 'A teammate',
+            inviterEmail: inviterEmail ?? '',
+            targetEmail: email,
+            signupUrl: `${env.clientOrigin.replace(/\/$/, '')}/login`,
+            message: `${inviterName ?? 'A teammate'} invited you to join their team. Create an account with this email to accept the invite.`,
+          }
+        )
+      }
+
+      return res.status(created ? 202 : 200).json({
+        id: `invite:${email}`,
+        name,
+        email,
+        inviteStatus: 'pending',
+        inviteId: invite.id,
+        message: created
+          ? 'Invite email sent. Ask them to sign up with this email, then accept from Notifications.'
+          : 'This email already has a pending invite from your workspace.',
+      })
     }
 
     if (existing.id === inviterUserId) {
