@@ -4,6 +4,13 @@ import { persist } from 'zustand/middleware'
 import { fetchMeApi, loginApi, setAuthTokenGetter, signupApi } from '@/services/task-api'
 import type { User } from '@/types/user'
 
+export type SignupResult = { ok: true } | { ok: false; message: string }
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message
+  return 'Something went wrong. Please try again.'
+}
+
 type AuthStore = {
   accessToken: string | null
   currentUser: User | null
@@ -11,7 +18,7 @@ type AuthStore = {
   isLoggingIn: boolean
   isSigningUp: boolean
   login: (input: { email: string; password: string }) => Promise<boolean>
-  signup: (input: { name: string; email: string; password: string }) => Promise<boolean>
+  signup: (input: { name: string; email: string; password: string }) => Promise<SignupResult>
   setCurrentUser: (user: User) => void
   bootstrap: () => Promise<void>
   logout: () => void
@@ -49,10 +56,10 @@ export const useAuthStore = create<AuthStore>()(
             currentUser: session.user,
             isSigningUp: false,
           })
-          return true
-        } catch {
+          return { ok: true }
+        } catch (error) {
           set({ isSigningUp: false })
-          return false
+          return { ok: false, message: errorMessage(error) }
         }
       },
       setCurrentUser: (user) => {

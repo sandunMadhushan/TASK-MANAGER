@@ -13,7 +13,15 @@ export const app = express()
 
 app.use(
   cors({
-    origin: env.clientOrigin,
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true)
+      }
+      if (env.clientOrigins.includes(origin)) {
+        return callback(null, true)
+      }
+      return callback(null, false)
+    },
   })
 )
 app.use(express.json({ limit: '6mb' }))

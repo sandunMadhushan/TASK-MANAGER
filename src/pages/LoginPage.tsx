@@ -73,11 +73,9 @@ export function LoginPage() {
       toast.error('Passwords do not match')
       return
     }
-    const ok = await signup({ name: trimmedName, email: normalizedEmail, password })
-    if (!ok) {
-      toast.error('Sign up failed', {
-        description: 'Use a stronger password or try a different email.',
-      })
+    const result = await signup({ name: trimmedName, email: normalizedEmail, password })
+    if (!result.ok) {
+      toast.error('Sign up failed', { description: result.message })
       return
     }
     toast.success('Account created')

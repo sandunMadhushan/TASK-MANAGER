@@ -9,7 +9,7 @@ async function bootstrap() {
   await ensureDefaultUsers()
 
   app.listen(env.port, () => {
-    console.log(`API server running on http://localhost:${env.port}`)
+    console.log(`API server listening on port ${env.port}`)
   })
 }
 
