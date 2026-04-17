@@ -5,13 +5,13 @@ import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { emitNovuNotificationsUpdated } from '@/lib/novu-events'
+import { envString, resolveNovuBackendUrl, resolveNovuSocketUrl } from '@/lib/runtime-env'
 import { fetchNovuSubscriberAuthApi } from '@/services/task-api'
 import { useAuthStore } from '@/store/auth-store'
 
-const APP_ID = import.meta.env.VITE_NOVU_APPLICATION_IDENTIFIER as string | undefined
-const BACKEND_URL =
-  (import.meta.env.VITE_NOVU_BACKEND_URL as string | undefined) ?? 'http://localhost:5000'
-const SOCKET_URL = (import.meta.env.VITE_NOVU_SOCKET_URL as string | undefined) ?? 'ws://localhost:3002'
+const APP_ID = envString(import.meta.env.VITE_NOVU_APPLICATION_IDENTIFIER)
+const BACKEND_URL = resolveNovuBackendUrl()
+const SOCKET_URL = resolveNovuSocketUrl()
 
 type SubscriberConfig = {
   subscriberId: string

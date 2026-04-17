@@ -1,9 +1,8 @@
+import { resolveApiBaseUrl } from '@/lib/runtime-env'
 import type { Task, TaskStatus } from '@/types/task'
 import type { User } from '@/types/user'
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.trim()
-  ? (import.meta.env.VITE_API_URL as string).trim()
-  : 'http://localhost:4000/api'
+const API_BASE_URL = resolveApiBaseUrl()
 
 let authTokenGetter: (() => string | null) | null = null
 
