@@ -98,6 +98,30 @@ Backend default: `http://localhost:4000`
 - `npm run lint` - lint project
 - `npm run server:dev` - start backend with watch mode
 - `npm run server:start` - start backend normally
+- `npm run tauri:dev` - run desktop app in development
+- `npm run tauri:build` - build desktop installer/bundles
+
+## Desktop App (Tauri)
+
+Tauri scaffolding is included in `src-tauri/` so this project can run as a desktop app.
+
+### One-time prerequisites (Windows)
+
+- Install Rust toolchain via [rustup](https://rustup.rs/)
+- Install Visual Studio Build Tools with **MSVC + Windows SDK**
+- Ensure WebView2 runtime is installed (usually already present on Windows 10/11)
+
+### Run desktop app
+
+```bash
+npm run tauri:dev
+```
+
+### Build desktop installer
+
+```bash
+npm run tauri:build
+```
 
 ## Environment Variables
 
