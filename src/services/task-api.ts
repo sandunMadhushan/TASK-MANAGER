@@ -1,3 +1,4 @@
+import { isTauri } from '@tauri-apps/api/core'
 import { resolveApiBaseUrl } from '@/lib/runtime-env'
 import type { Task, TaskStatus } from '@/types/task'
 import type { User } from '@/types/user'
@@ -85,17 +86,26 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
+/** WebView fetch blocks mixed content (https page → http API). Tauri’s HTTP plugin uses the OS client instead. */
+async function appFetch(requestUrl: string, requestInit: RequestInit): Promise<Response> {
+  if (isTauri()) {
+    const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http')
+    return tauriFetch(requestUrl, requestInit)
+  }
+  return fetch(requestUrl, requestInit)
+}
+
 async function fetchWithTransientRetry(
   requestUrl: string,
   requestInit: RequestInit
 ): Promise<Response> {
   try {
-    return await fetch(requestUrl, requestInit)
+    return await appFetch(requestUrl, requestInit)
   } catch (error) {
     // API dev server can briefly restart while watching files; retry once.
     if (!isTransientNetworkError(error)) throw error
     await delay(350)
-    return fetch(requestUrl, requestInit)
+    return appFetch(requestUrl, requestInit)
   }
 }
 
