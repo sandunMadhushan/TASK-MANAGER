@@ -1,3 +1,4 @@
+import { Eye, EyeOff } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -14,6 +15,7 @@ export function ResetPasswordPage() {
   const token = searchParams.get('token') ?? ''
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPasswords, setShowPasswords] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
   if (currentUser) return <Navigate to="/dashboard" replace />
@@ -35,8 +37,15 @@ export function ResetPasswordPage() {
     setIsSaving(true)
     try {
       await resetPasswordApi({ token, newPassword: password })
-      toast.success('Password reset successful', { description: 'You can now sign in.' })
-      window.location.href = '/login'
+      toast.success('Password reset successful', {
+        description: 'You can now open Nexus Tasks desktop app or sign in on web.',
+      })
+
+      // Trigger browser-level "Open this app?" prompt when the desktop app protocol exists.
+      window.location.href = 'nexustasks://open?source=reset-password'
+      window.setTimeout(() => {
+        window.location.href = '/login'
+      }, 1500)
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unable to reset password. Please try again.'
@@ -55,19 +64,31 @@ export function ResetPasswordPage() {
         <CardContent>
           <form className="space-y-3" onSubmit={handleSubmit}>
             <Input
-              type="password"
+              type={showPasswords ? 'text' : 'password'}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="New password"
               aria-label="New password"
             />
             <Input
-              type="password"
+              type={showPasswords ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               placeholder="Confirm new password"
               aria-label="Confirm new password"
             />
+            <div className="flex justify-end -mt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto cursor-pointer px-1 py-0 text-[11px] text-muted-foreground"
+                onClick={() => setShowPasswords((v) => !v)}
+              >
+                {showPasswords ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                {showPasswords ? 'Hide passwords' : 'Show passwords'}
+              </Button>
+            </div>
             <Button type="submit" className="w-full" disabled={isSaving}>
               {isSaving ? 'Resetting...' : 'Reset password'}
             </Button>

@@ -23,7 +23,6 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [forgotOpen, setForgotOpen] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
   const [isSendingReset, setIsSendingReset] = useState(false)
@@ -246,24 +245,12 @@ export function LoginPage() {
               {mode === 'signup' ? (
                 <>
                   <Input
-                    type={showConfirmPassword ? 'text' : 'password'}
+                    type={showPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     placeholder="Confirm password"
                     aria-label="Confirm password"
                   />
-                  <div className="flex justify-end -mt-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto cursor-pointer px-1 py-0 text-[11px] text-muted-foreground"
-                      onClick={() => setShowConfirmPassword((v) => !v)}
-                    >
-                      {showConfirmPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                      {showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-                    </Button>
-                  </div>
                 </>
               ) : null}
               <Button type="submit" className="w-full" disabled={isSubmitting}>

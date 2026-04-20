@@ -38,6 +38,11 @@
     ]
   },
   "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["nexustasks"]
+      }
+    },
     "updater": {
       "endpoints": [
         "https://github.com/sandunMadhushan/TASK-MANAGER/releases/latest/download/latest.json"
