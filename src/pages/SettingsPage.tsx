@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion'
-import { Settings2 } from 'lucide-react'
+import { RefreshCw, Settings2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { checkForDesktopUpdate } from '@/lib/desktop-updater'
 import {
   Select,
   SelectContent,
@@ -48,6 +49,17 @@ export function SettingsPage() {
               <Settings2 className="size-4.5 text-muted-foreground" aria-hidden />
             </div>
             <h2 className="font-heading text-base font-semibold">Experience</h2>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
+            <p className="text-sm font-medium text-foreground">Desktop updates</p>
+            <p className="mb-2 text-xs text-muted-foreground">
+              Checks GitHub Releases for a newer desktop version.
+            </p>
+            <Button type="button" size="sm" variant="outline" onClick={() => void checkForDesktopUpdate()}>
+              <RefreshCw className="size-3.5" />
+              Check for updates
+            </Button>
           </div>
 
           <div className="grid gap-3">

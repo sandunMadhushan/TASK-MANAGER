@@ -21,7 +21,7 @@
 - Team management (invite/edit/remove members from workspace — accounts are not deleted)
 - Real-time-ready Novu inbox bell and notifications page
 - Global search, filters, sorting, and polished dark glass UI
-- **Desktop:** Tauri v1 app (Windows/macOS/Linux) sharing the same React UI
+- **Desktop:** Tauri v2 app (Windows/macOS/Linux) sharing the same React UI
 
 ## Tech Stack
 
@@ -92,6 +92,7 @@ Backend default: `http://localhost:4000`
 - `npm run tauri:dev` - run desktop app in development
 - `npm run tauri:build` - production Vite build + Tauri installer/bundles
 - `npm run icons:generate` - convert `public/logo.png` → `src-tauri/icons/` (run when you change the logo)
+- `npm run release:version -- <x.y.z> [--tag]` - sync release version across `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml` (optional tag creation)
 
 ## Desktop App (Tauri)
 
@@ -126,6 +127,45 @@ npm run tauri:build
 ```
 
 Installers appear under `src-tauri/target/release/bundle/` (e.g. `.msi` / `.exe` on Windows). The app opens **maximized** by default (`tauri.conf.json`).
+
+### Desktop auto-updates (GitHub Releases)
+
+This project is wired to use the Tauri updater with GitHub Releases:
+
+- Updater plugin: `@tauri-apps/plugin-updater` + `tauri-plugin-updater`
+- Update endpoint: `https://github.com/sandunMadhushan/TASK-MANAGER/releases/latest/download/latest.json`
+- Settings page includes **Check for updates**
+- App also performs a silent startup check in desktop builds
+- If an update exists, the app shows a themed toast with **Install now** / **Later** actions (no browser confirm popup)
+- CI workflow (`.github/workflows/desktop-release.yml`) builds signed desktop artifacts on `v*` tags and publishes release assets automatically
+
+Before shipping updater-enabled releases, you must configure signing:
+
+1. Generate a Tauri updater key pair (once).
+2. Put the **private key** and password in CI/local build secrets.
+3. Replace `src-tauri/tauri.conf.json` updater `pubkey` with your public key.
+4. Build with `npm run tauri:build` (this repo sets `"createUpdaterArtifacts": true`).
+5. Publish the generated updater artifacts/signatures in the GitHub Release for each new tag.
+
+Without a valid updater key pair + published updater artifacts, update checks will fail at runtime.
+
+### Version bump shortcut
+
+To keep release versions aligned across `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`:
+
+```bash
+npm run release:version -- 0.1.2
+```
+
+Optional: create an annotated tag in the same step:
+
+```bash
+npm run release:version -- 0.1.2 --tag
+```
+
+For the full release checklist (tag -> GitHub Actions build -> release assets -> updater test), see:
+
+- [`docs/deployment/10-desktop-release-github-updater.md`](./docs/deployment/10-desktop-release-github-updater.md)
 
 ## Environment Variables
 
@@ -268,6 +308,7 @@ pm2 restart <your-api-process>
 - Troubleshooting: [`docs/deployment/07-troubleshooting.md`](./docs/deployment/07-troubleshooting.md)
 - Update deployment branch from master/main: [`docs/deployment/08-master-to-deployment-workflow.md`](./docs/deployment/08-master-to-deployment-workflow.md)
 - Novu workflow content (subject/body/redirect): [`docs/deployment/09-novu-workflow-content.md`](./docs/deployment/09-novu-workflow-content.md)
+- Desktop release + updater (GitHub Releases): [`docs/deployment/10-desktop-release-github-updater.md`](./docs/deployment/10-desktop-release-github-updater.md)
 
 ### Production checklist
 

@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Nexus Tasks",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "com.nexustasks.app",
   "build": {
     "frontendDist": "../dist",
@@ -27,6 +27,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",
@@ -35,5 +36,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/sandunMadhushan/TASK-MANAGER/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFFNDNFNzkxRkY0M0VFNDgKUldSSTdrUC9rZWREcmplbEp5d1l0Mk50YjBHMDVVSEIwTUFQWkxVNG5qa2VNYlJWem1xNmk1R00K"
+    }
   }
 }
