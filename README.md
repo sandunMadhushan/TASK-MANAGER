@@ -21,7 +21,7 @@
 - Team management (invite/edit/remove members from workspace — accounts are not deleted)
 - Real-time-ready Novu inbox bell and notifications page
 - Global search, filters, sorting, and polished dark glass UI
-- **Desktop:** Tauri v2 app (Windows/macOS/Linux) sharing the same React UI
+- **Desktop:** Tauri v2 app sharing the same React UI (currently released for Windows; macOS/Linux can be added)
 
 ## Tech Stack
 
