@@ -113,54 +113,41 @@ function StatusStrip({
   }
   const total = todo + inProgress + done;
   const doneRatio = Math.round((done / total) * 100);
-  const open = todo + inProgress;
-  const wDoneComplete = (done / total) * 100;
-  const wTodoAmongOpen = open > 0 ? (todo / open) * 100 : 0;
-  const wIpAmongOpen = open > 0 ? (inProgress / open) * 100 : 0;
+  const wTodo = (todo / total) * 100;
+  const wIp = (inProgress / total) * 100;
+  const wDone = (done / total) * 100;
 
   return (
-    <div className="space-y-2.5">
-      <div className="space-y-1">
-        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          Completed
-        </p>
-        <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-white/10">
+    <div className="space-y-1.5">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        Tasks by status
+      </p>
+      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-white/10">
+        {wTodo > 0 ? (
           <div
-            className="h-full rounded-full bg-emerald-500/90 transition-[width] duration-300"
-            style={{ width: `${wDoneComplete}%` }}
-            title={`${done} of ${total} tasks done`}
+            className="h-full bg-slate-400/85 transition-[width] duration-300"
+            style={{ width: `${wTodo}%` }}
+            title={`To do: ${todo}`}
           />
-        </div>
-        <p className="text-[11px] text-muted-foreground">
-          {doneRatio}% of tasks done ({done}/{total})
-        </p>
+        ) : null}
+        {wIp > 0 ? (
+          <div
+            className="h-full bg-violet-500/85 transition-[width] duration-300"
+            style={{ width: `${wIp}%` }}
+            title={`In progress: ${inProgress}`}
+          />
+        ) : null}
+        {wDone > 0 ? (
+          <div
+            className="h-full bg-emerald-500/85 transition-[width] duration-300"
+            style={{ width: `${wDone}%` }}
+            title={`Done: ${done}`}
+          />
+        ) : null}
       </div>
-      {open > 0 ? (
-        <div className="space-y-1">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-            Open work mix
-          </p>
-          <div className="flex h-2 w-full overflow-hidden rounded-full bg-white/10">
-            {wTodoAmongOpen > 0 ? (
-              <div
-                className="h-full bg-slate-400/85 transition-[width] duration-300"
-                style={{ width: `${wTodoAmongOpen}%` }}
-                title={`To do: ${todo}`}
-              />
-            ) : null}
-            {wIpAmongOpen > 0 ? (
-              <div
-                className="h-full bg-violet-500/85 transition-[width] duration-300"
-                style={{ width: `${wIpAmongOpen}%` }}
-                title={`In progress: ${inProgress}`}
-              />
-            ) : null}
-          </div>
-          <p className="text-[11px] text-muted-foreground">
-            {todo} to do · {inProgress} in progress
-          </p>
-        </div>
-      ) : null}
+      <p className="text-[11px] text-muted-foreground">
+        {doneRatio}% done · {todo} to do · {inProgress} in progress
+      </p>
     </div>
   );
 }
