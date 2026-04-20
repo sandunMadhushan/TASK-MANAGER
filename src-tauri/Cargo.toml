@@ -1,10 +1,10 @@
 [package]
-name = "app"
+name = "nexus-tasks-app"
 version = "0.1.2"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
-repository = ""
+description = "Nexus Tasks desktop application built with Tauri"
+authors = ["Sandun Madhushan"]
+license = "Apache-2.0"
+repository = "https://github.com/sandunMadhushan/TASK-MANAGER"
 edition = "2021"
 rust-version = "1.77.2"
 
