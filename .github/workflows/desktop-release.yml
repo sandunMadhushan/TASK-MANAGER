@@ -50,6 +50,49 @@ jobs:
       - name: Build Tauri bundles (signed)
         run: npm run tauri:build
 
+      - name: Generate updater latest.json
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag.TrimStart("v")
+          $releaseDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          $repo = "${{ github.repository }}"
+
+          $exe = Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse -Filter "*.exe" | Select-Object -First 1
+          $msi = Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse -Filter "*.msi" | Select-Object -First 1
+
+          if ($exe) {
+            $artifact = $exe
+          } elseif ($msi) {
+            $artifact = $msi
+          } else {
+            throw "No Windows installer artifact (.exe or .msi) found."
+          }
+
+          $sigPath = "$($artifact.FullName).sig"
+          if (!(Test-Path $sigPath)) {
+            throw "Missing signature file: $sigPath"
+          }
+          $signature = (Get-Content -Path $sigPath -Raw).Trim()
+
+          $downloadUrl = "https://github.com/$repo/releases/download/$tag/$($artifact.Name)"
+
+          $manifest = [ordered]@{
+            version = $version
+            notes = "Release $tag"
+            pub_date = $releaseDate
+            platforms = [ordered]@{
+              "windows-x86_64" = [ordered]@{
+                signature = $signature
+                url = $downloadUrl
+              }
+            }
+          }
+
+          $json = $manifest | ConvertTo-Json -Depth 10
+          New-Item -ItemType Directory -Path "src-tauri/target/release" -Force | Out-Null
+          Set-Content -Path "src-tauri/target/release/latest.json" -Value $json -Encoding utf8
+
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
