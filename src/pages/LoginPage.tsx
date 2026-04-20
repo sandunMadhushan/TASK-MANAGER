@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion'
-import { ArrowRight, Eye, EyeOff, ShieldCheck, UserPlus } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck, UserPlus } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -131,6 +131,17 @@ export function LoginPage() {
 
       <div className="pointer-events-none absolute -left-20 top-16 size-72 rounded-full bg-violet-500/18 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-20 right-10 size-80 rounded-full bg-indigo-500/14 blur-3xl" />
+
+      <Link
+        to="/"
+        className={buttonVariants({
+          variant: 'ghost',
+          className: 'mb-3 self-start text-muted-foreground',
+        })}
+      >
+        <ArrowLeft className="size-4" />
+        Back
+      </Link>
 
       <motion.div
         initial={{ opacity: 0, y: 10 }}
