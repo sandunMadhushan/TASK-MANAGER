@@ -74,7 +74,8 @@ jobs:
               throw "Missing MSI signature file: $msiSigPath"
             }
             $msiSignature = (Get-Content -Path $msiSigPath -Raw).Trim()
-            $msiUrl = "https://github.com/$repo/releases/download/$tag/$($msi.Name)"
+            $msiReleaseName = ($msi.Name -replace ' ', '.')
+            $msiUrl = "https://github.com/$repo/releases/download/$tag/$msiReleaseName"
             $platforms["windows-x86_64-msi"] = [ordered]@{
               signature = $msiSignature
               url = $msiUrl
@@ -87,7 +88,8 @@ jobs:
               throw "Missing EXE signature file: $exeSigPath"
             }
             $exeSignature = (Get-Content -Path $exeSigPath -Raw).Trim()
-            $exeUrl = "https://github.com/$repo/releases/download/$tag/$($exe.Name)"
+            $exeReleaseName = ($exe.Name -replace ' ', '.')
+            $exeUrl = "https://github.com/$repo/releases/download/$tag/$exeReleaseName"
             $platforms["windows-x86_64-exe"] = [ordered]@{
               signature = $exeSignature
               url = $exeUrl

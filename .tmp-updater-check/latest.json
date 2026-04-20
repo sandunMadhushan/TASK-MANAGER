@@ -1,11 +1,19 @@
 {
-  "version": "0.1.1",
-  "notes": "Release v0.1.1",
-  "pub_date": "2026-04-20T09:47:54Z",
+  "version": "0.1.2",
+  "notes": "Release v0.1.2",
+  "pub_date": "2026-04-20T12:46:24Z",
   "platforms": {
+    "windows-x86_64-msi": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSSTdrUC9rZWREcnBnWWJubXZTRTBWUXpZZnVhSHJKSnRhQ284WnoyakpHNU5lc240TS8rQkMyUVdabU05eG5CRXlrNFB2VmJnMHNqQk5zWWcyL0h2U2JITUtvNGh1amc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc2Njg5MTg0CWZpbGU6TmV4dXMgVGFza3NfMC4xLjJfeDY0X2VuLVVTLm1zaQpVcFNmQVlpZ1pHYklBdnpUVm1RSDFpcVNpbHBiTFdUSmFuUCt5VnRHYklML2hrRXhMaW1PZERMemk1a3RCeGV6dGhDN0dEV1ZQVVhza2dGUXlucUpCdz09Cg==",
+      "url": "https://github.com/sandunMadhushan/TASK-MANAGER/releases/download/v0.1.2/Nexus.Tasks_0.1.2_x64_en-US.msi"
+    },
+    "windows-x86_64-exe": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSSTdrUC9rZWREcnFETGMrRVFZa0NuazVUQjlKcm9oNmdnNWMyMnQ3eDhDTUpXdC9JVmZMMCt0RUw5Z0NxWFZPV09WdFMvVE5FR1J3TXFyZElkY2o5NmppVi9vTE42QUFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc2Njg5MTg0CWZpbGU6TmV4dXMgVGFza3NfMC4xLjJfeDY0LXNldHVwLmV4ZQp0VnBsUVFIVVFYYzNJdE1YQmtmNGNsWlRybmliRm1icGQxK0xZVG1yK3VsUEtZME5CZFA2dkFpUFVrbnF2SlQ0eVRRaWV0WHZXUXJjRGU2ZTJmT1FEUT09Cg==",
+      "url": "https://github.com/sandunMadhushan/TASK-MANAGER/releases/download/v0.1.2/Nexus.Tasks_0.1.2_x64-setup.exe"
+    },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSSTdrUC9rZWREcmdRZTU4RUh2enpGd2s1TUhNMG4yNFFjQnh2S1M3bjZuWG5FbGMydmtkYS9tZjZzRGV0S0N2L2o3aTRIN2dHOXZNTFVMU0ZUVDJ0VFhnZmZ3WnRhRVEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc2Njc3OTg2CWZpbGU6TmV4dXMgVGFza3NfMC4xLjFfeDY0LXNldHVwLmV4ZQpsM3ZZOU1tMTFMbTFDZUpnL1FUSFgxbUR6UlpUTlhKbis4MlhxSmNCMEJwamhhQUpsT1RvdEQyeWI1dUpwSWtXeG1ybHNneTJXNm05SmIwcFZEbGpEZz09Cg==",
-      "url": "https://github.com/sandunMadhushan/TASK-MANAGER/releases/download/v0.1.1/Nexus.Tasks_0.1.1_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSSTdrUC9rZWREcnBnWWJubXZTRTBWUXpZZnVhSHJKSnRhQ284WnoyakpHNU5lc240TS8rQkMyUVdabU05eG5CRXlrNFB2VmJnMHNqQk5zWWcyL0h2U2JITUtvNGh1amc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc2Njg5MTg0CWZpbGU6TmV4dXMgVGFza3NfMC4xLjJfeDY0X2VuLVVTLm1zaQpVcFNmQVlpZ1pHYklBdnpUVm1RSDFpcVNpbHBiTFdUSmFuUCt5VnRHYklML2hrRXhMaW1PZERMemk1a3RCeGV6dGhDN0dEV1ZQVVhza2dGUXlucUpCdz09Cg==",
+      "url": "https://github.com/sandunMadhushan/TASK-MANAGER/releases/download/v0.1.2/Nexus.Tasks_0.1.2_x64_en-US.msi"
     }
   }
 }
