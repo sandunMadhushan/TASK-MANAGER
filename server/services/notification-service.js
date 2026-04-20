@@ -54,7 +54,7 @@ export async function notifyTaskAssigned(task, users) {
   })
 }
 
-export async function notifyTaskCompleted(task, users) {
+export async function notifyTaskCompleted(task, users, extraPayload = {}) {
   if (!env.novuWorkflowTaskCompleted) return
   await triggerForUsers({
     workflowId: env.novuWorkflowTaskCompleted,
@@ -64,6 +64,7 @@ export async function notifyTaskCompleted(task, users) {
       title: task.title,
       status: task.status,
       dueDate: task.dueDate,
+      ...extraPayload,
     },
   })
 }

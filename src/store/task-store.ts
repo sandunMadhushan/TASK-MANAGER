@@ -22,8 +22,8 @@ type TaskStore = {
   updatingTaskId: string | null
   deletingTaskId: string | null
   error: string | null
-  fetchTasks: () => Promise<void>
-  fetchUsers: () => Promise<void>
+  fetchTasks: (options?: { silent?: boolean }) => Promise<void>
+  fetchUsers: (options?: { silent?: boolean }) => Promise<void>
   addTask: (
     input: Pick<Task, 'title' | 'description' | 'status' | 'dueDate' | 'assignedToIds'>
   ) => Promise<boolean>
@@ -45,7 +45,7 @@ export const useTaskStore = create<TaskStore>((set) => ({
   updatingTaskId: null,
   deletingTaskId: null,
   error: null,
-  fetchTasks: async () => {
+  fetchTasks: async (options) => {
     set({ isLoading: true, error: null })
     try {
       const tasks = await fetchTasksApi()
@@ -59,10 +59,12 @@ export const useTaskStore = create<TaskStore>((set) => ({
         isLoading: false,
         error: message,
       })
-      toast.error('Failed to load tasks', { description: message })
+      if (!options?.silent) {
+        toast.error('Failed to load tasks', { description: message })
+      }
     }
   },
-  fetchUsers: async () => {
+  fetchUsers: async (options) => {
     set({ isUsersLoading: true, error: null })
     try {
       const users = await fetchUsersApi()
@@ -76,7 +78,9 @@ export const useTaskStore = create<TaskStore>((set) => ({
         isUsersLoading: false,
         error: message,
       })
-      toast.error('Failed to load team', { description: message })
+      if (!options?.silent) {
+        toast.error('Failed to load team', { description: message })
+      }
     }
   },
   addTask: async (input) => {

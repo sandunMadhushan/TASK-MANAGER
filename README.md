@@ -38,7 +38,6 @@
 ├── server/                 # Express API (deploy to AWS EC2, PM2, etc.)
 ├── src-tauri/              # Tauri desktop shell + Rust
 ├── scripts/                # e.g. generate-tauri-icons.mjs
-├── docs/deployment/        # AWS, Vercel, Novu, troubleshooting
 ├── src/
 │   ├── components/
 │   ├── pages/
@@ -163,9 +162,7 @@ Optional: create an annotated tag in the same step:
 npm run release:version -- 0.1.2 --tag
 ```
 
-For the full release checklist (version bump -> tag push -> GitHub Actions build -> updater test), see:
-
-- [`docs/deployment/10-desktop-release-github-updater.md`](./docs/deployment/10-desktop-release-github-updater.md)
+For release checklist in this branch, follow the version bump -> tag push -> GitHub Actions build -> updater test flow described in the Desktop App section above.
 
 ## Environment Variables
 
@@ -275,10 +272,6 @@ Default local base URL: `http://localhost:4000/api`. In production, use your dep
 - Users only see tasks relevant to them (created by or assigned to them) within workspace
 - Assignment validation is workspace-bound
 
-## Hosting (internet deploy)
-
-Step-by-step deployment guides — including **using a separate Git branch** and keeping **local `.env` unchanged** for localhost — are in [`docs/deployment/`](./docs/deployment/README.md). For updating production after you commit to `master`/`main`, see [`docs/deployment/08-master-to-deployment-workflow.md`](./docs/deployment/08-master-to-deployment-workflow.md).
-
 ## Deployment (AWS + Vercel + Novu + desktop)
 
 Recommended production split:
@@ -296,19 +289,6 @@ If the browser or a hosted SPA shows **“Failed to fetch”** for login/signup 
 ```bash
 pm2 restart <your-api-process>
 ```
-
-### Deployment docs map
-
-- Overview/accounts: [`docs/deployment/01-overview-and-accounts.md`](./docs/deployment/01-overview-and-accounts.md)
-- MongoDB Atlas: [`docs/deployment/02-mongodb-atlas.md`](./docs/deployment/02-mongodb-atlas.md)
-- Backend host setup: [`docs/deployment/03-backend-aws.md`](./docs/deployment/03-backend-aws.md)
-- Frontend (Vercel): [`docs/deployment/04-frontend-vercel.md`](./docs/deployment/04-frontend-vercel.md)
-- Env vars reference: [`docs/deployment/05-environment-variables-reference.md`](./docs/deployment/05-environment-variables-reference.md)
-- Novu production setup: [`docs/deployment/06-novu-production.md`](./docs/deployment/06-novu-production.md)
-- Troubleshooting: [`docs/deployment/07-troubleshooting.md`](./docs/deployment/07-troubleshooting.md)
-- Update deployment branch from master/main: [`docs/deployment/08-master-to-deployment-workflow.md`](./docs/deployment/08-master-to-deployment-workflow.md)
-- Novu workflow content (subject/body/redirect): [`docs/deployment/09-novu-workflow-content.md`](./docs/deployment/09-novu-workflow-content.md)
-- Desktop release + updater (GitHub Releases): [`docs/deployment/10-desktop-release-github-updater.md`](./docs/deployment/10-desktop-release-github-updater.md)
 
 ### Production checklist
 
