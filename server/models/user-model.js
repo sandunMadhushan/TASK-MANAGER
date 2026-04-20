@@ -44,6 +44,13 @@ const userSchema = new mongoose.Schema(
       required: false,
       index: true,
     },
+    workspaceIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        index: true,
+      },
+    ],
   },
   {
     timestamps: { createdAt: true, updatedAt: false },
@@ -54,6 +61,12 @@ const userSchema = new mongoose.Schema(
 userSchema.set('toJSON', {
   transform: (_doc, ret) => {
     ret.id = ret._id.toString()
+    if (ret.workspaceId) ret.workspaceId = ret.workspaceId.toString()
+    if (Array.isArray(ret.workspaceIds)) {
+      ret.workspaceIds = ret.workspaceIds.map((id) => String(id))
+    } else {
+      ret.workspaceIds = []
+    }
     delete ret._id
     delete ret.passwordHash
     delete ret.passwordResetTokenHash

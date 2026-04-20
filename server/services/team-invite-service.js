@@ -61,9 +61,19 @@ export async function acceptTeamInvite(inviteId, currentUser) {
   })
   if (!invite) return { ok: false, statusCode: 404, message: 'Invite not found.' }
 
-  await UserModel.findByIdAndUpdate(currentUser.id, {
-    workspaceId: invite.workspaceId,
-  })
+  const user = await UserModel.findById(currentUser.id)
+  if (!user) return { ok: false, statusCode: 404, message: 'User not found.' }
+  const workspaceId = String(invite.workspaceId)
+  const currentWorkspaceIds = Array.isArray(user.workspaceIds)
+    ? user.workspaceIds.map((id) => String(id))
+    : []
+  if (!currentWorkspaceIds.includes(workspaceId)) {
+    user.workspaceIds = [...currentWorkspaceIds, workspaceId]
+  }
+  if (!user.workspaceId) {
+    user.workspaceId = workspaceId
+  }
+  await user.save()
 
   invite.status = 'accepted'
   invite.respondedAt = new Date()

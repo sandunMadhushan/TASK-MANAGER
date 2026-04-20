@@ -23,6 +23,10 @@ export async function requireAuth(req, res, next) {
       email: user.email,
       name: user.name,
       workspaceId: user.workspaceId ? String(user.workspaceId) : String(user.id),
+      workspaceIds:
+        Array.isArray(user.workspaceIds) && user.workspaceIds.length > 0
+          ? user.workspaceIds.map((id) => String(id))
+          : [user.workspaceId ? String(user.workspaceId) : String(user.id)],
     }
     return next()
   } catch {

@@ -61,11 +61,11 @@ export async function createTaskHandler(req, res, next) {
 export async function getTasksHandler(req, res, next) {
   try {
     const currentUserId = req.user?.id
-    const workspaceId = req.user?.workspaceId
+    const workspaceIds = req.user?.workspaceIds ?? [req.user?.workspaceId]
     if (!currentUserId) {
       return res.status(401).json({ message: 'Unauthorized' })
     }
-    const tasks = await getTasksForUser(currentUserId, workspaceId)
+    const tasks = await getTasksForUser(currentUserId, workspaceIds)
     return res.status(200).json(tasks)
   } catch (error) {
     return next(error)

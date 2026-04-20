@@ -307,6 +307,11 @@ export function TeamPage() {
                       ) : null}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                    {Array.isArray(user.workspaceNames) && user.workspaceNames.length > 0 ? (
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        Groups: {user.workspaceNames.join(', ')}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="inline-flex flex-wrap items-center gap-2">
                     {isWorkspaceOwner && String(user.id) !== workspaceRootId ? (
@@ -396,6 +401,18 @@ export function TeamPage() {
                   <Mail className="size-3.5" />
                   {user.email}
                 </p>
+                {Array.isArray(user.workspaceNames) && user.workspaceNames.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {user.workspaceNames.map((group) => (
+                      <span
+                        key={`${user.id}-${group}`}
+                        className="rounded-full border border-sky-300/35 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-200"
+                      >
+                        {group}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2">
                     <p className="text-muted-foreground">Total</p>

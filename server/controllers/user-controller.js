@@ -15,8 +15,8 @@ import { env } from '../config/env.js'
 
 export async function getUsersHandler(req, res, next) {
   try {
-    const workspaceId = req.user?.workspaceId
-    const users = await getUsers(workspaceId)
+    const workspaceIds = req.user?.workspaceIds ?? [req.user?.workspaceId]
+    const users = await getUsers(workspaceIds)
     return res.status(200).json(users)
   } catch (error) {
     return next(error)
@@ -104,7 +104,10 @@ export async function createUserHandler(req, res, next) {
     if (existing.id === inviterUserId) {
       return res.status(400).json({ message: 'You cannot invite the account you are logged in with.' })
     }
-    if (String(existing.workspaceId ?? '') === String(workspaceId ?? '')) {
+    const memberWorkspaceIds = Array.isArray(existing.workspaceIds)
+      ? existing.workspaceIds.map((id) => String(id))
+      : []
+    if (memberWorkspaceIds.includes(String(workspaceId ?? ''))) {
       return res.status(409).json({ message: 'This user is already on your team.' })
     }
 

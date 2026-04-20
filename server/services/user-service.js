@@ -32,11 +32,67 @@ function normalizeWorkspaceId(workspaceId) {
   return String(workspaceId)
 }
 
+function normalizeWorkspaceIds(rawWorkspaceIds, fallbackWorkspaceId, userId) {
+  const set = new Set()
+  if (Array.isArray(rawWorkspaceIds)) {
+    for (const id of rawWorkspaceIds) {
+      const normalized = normalizeWorkspaceId(id)
+      if (normalized) set.add(normalized)
+    }
+  }
+  const fallback = normalizeWorkspaceId(fallbackWorkspaceId)
+  if (fallback) set.add(fallback)
+  const self = normalizeWorkspaceId(userId)
+  if (set.size === 0 && self) set.add(self)
+  return Array.from(set)
+}
+
+function normalizeUserMembership(user) {
+  if (!user) return user
+  const userObj = user.id ? user : user.toJSON()
+  const workspaceIds = normalizeWorkspaceIds(
+    userObj.workspaceIds,
+    userObj.workspaceId,
+    userObj.id
+  )
+  return {
+    ...userObj,
+    workspaceId: userObj.workspaceId ? String(userObj.workspaceId) : workspaceIds[0],
+    workspaceIds,
+  }
+}
+
 export async function getUsers(workspaceId) {
-  const workspace = normalizeWorkspaceId(workspaceId)
-  const query = workspace ? { workspaceId: workspace } : {}
+  const workspaceIds = Array.isArray(workspaceId)
+    ? workspaceId.map((id) => normalizeWorkspaceId(id)).filter(Boolean)
+    : [normalizeWorkspaceId(workspaceId)].filter(Boolean)
+
+  const query =
+    workspaceIds.length > 0
+      ? {
+          $or: [
+            { workspaceIds: { $in: workspaceIds } },
+            { workspaceId: { $in: workspaceIds } },
+          ],
+        }
+      : {}
   const users = await UserModel.find(query).sort({ name: 1 })
-  return users.map((user) => user.toJSON())
+  const normalizedUsers = users.map((user) => normalizeUserMembership(user))
+
+  const workspaceRoots = new Set(
+    normalizedUsers.flatMap((u) => u.workspaceIds ?? [])
+  )
+  const owners = await UserModel.find({ _id: { $in: Array.from(workspaceRoots) } })
+  const ownerById = new Map(
+    owners.map((o) => [String(o._id), o.name || o.email || String(o._id)])
+  )
+
+  return normalizedUsers.map((user) => ({
+    ...user,
+    workspaceNames: (user.workspaceIds ?? []).map(
+      (id) => ownerById.get(String(id)) ?? String(id)
+    ),
+  }))
 }
 
 export async function getUserById(userId, options = {}) {
@@ -49,9 +105,9 @@ export async function getUserById(userId, options = {}) {
   if (!user) return null
   if (options.includePasswordHash) {
     const raw = user.toObject()
-    return { ...raw, id: raw._id.toString() }
+    return normalizeUserMembership({ ...raw, id: raw._id.toString() })
   }
-  return user.toJSON()
+  return normalizeUserMembership(user.toJSON())
 }
 
 export async function getUserByEmail(email, options = {}) {
@@ -64,9 +120,9 @@ export async function getUserByEmail(email, options = {}) {
   if (!user) return null
   if (options.includePasswordHash) {
     const raw = user.toObject()
-    return { ...raw, id: raw._id.toString() }
+    return normalizeUserMembership({ ...raw, id: raw._id.toString() })
   }
-  return user.toJSON()
+  return normalizeUserMembership(user.toJSON())
 }
 
 export async function ensureUserWorkspace(userId) {
@@ -75,9 +131,14 @@ export async function ensureUserWorkspace(userId) {
   if (!user) return null
   if (!user.workspaceId) {
     user.workspaceId = user._id
-    await user.save()
   }
-  return user.toJSON()
+  user.workspaceIds = normalizeWorkspaceIds(
+    user.workspaceIds?.map((id) => String(id)),
+    String(user.workspaceId),
+    String(user._id)
+  )
+  await user.save()
+  return normalizeUserMembership(user.toJSON())
 }
 
 export async function getUsersByIds(userIds, workspaceId) {
@@ -85,10 +146,13 @@ export async function getUsersByIds(userIds, workspaceId) {
   const query = { _id: { $in: userIds } }
   const workspace = normalizeWorkspaceId(workspaceId)
   if (workspace) {
-    query.workspaceId = workspace
+    query.$or = [
+      { workspaceIds: workspace },
+      { workspaceId: workspace },
+    ]
   }
   const users = await UserModel.find(query)
-  return users.map((user) => user.toJSON())
+  return users.map((user) => normalizeUserMembership(user.toJSON()))
 }
 
 export async function createUser(payload) {
@@ -101,24 +165,24 @@ export async function createUser(payload) {
     avatarUrl: payload.avatarUrl ?? '',
     passwordHash,
     workspaceId: payload.workspaceId,
+    workspaceIds: payload.workspaceId ? [payload.workspaceId] : undefined,
   })
   if (!user.workspaceId) {
     user = await UserModel.findByIdAndUpdate(
       user._id,
-      { workspaceId: user._id },
+      { workspaceId: user._id, workspaceIds: [user._id] },
       { new: true }
     )
   }
-  return user.toJSON()
+  return normalizeUserMembership(user.toJSON())
 }
 
 /**
  * Team invite: create a new user, or attach an existing account to this workspace.
  * Email stays globally unique (one login per email). Password is unchanged when joining.
  *
- * Note: each user has one `workspaceId`. Accepting an invite moves them into the
- * inviter’s workspace. Listing multiple teams at once for the same login would
- * need a separate membership model (not implemented here).
+ * A user can belong to multiple workspaces (`workspaceIds`), while `workspaceId`
+ * remains the primary/default workspace for compatibility.
  */
 export async function inviteUserToWorkspace(payload, workspaceId, actorUserId) {
   const email = String(payload.email).trim().toLowerCase()
@@ -150,7 +214,12 @@ export async function inviteUserToWorkspace(payload, workspaceId, actorUserId) {
     }
   }
 
-  if (String(existing.workspaceId ?? '') === ws) {
+  const existingWorkspaceIds = normalizeWorkspaceIds(
+    existing.workspaceIds?.map((id) => String(id)),
+    String(existing.workspaceId ?? ''),
+    existing._id.toString()
+  )
+  if (existingWorkspaceIds.includes(ws)) {
     return {
       ok: false,
       statusCode: 409,
@@ -162,10 +231,10 @@ export async function inviteUserToWorkspace(payload, workspaceId, actorUserId) {
   if (payload.avatarUrl !== undefined && String(payload.avatarUrl).trim() !== '') {
     existing.avatarUrl = String(payload.avatarUrl).trim()
   }
-  existing.workspaceId = ws
+  existing.workspaceIds = normalizeWorkspaceIds(existingWorkspaceIds, ws, existing._id.toString())
   await existing.save()
 
-  return { ok: true, statusCode: 200, user: existing.toJSON(), outcome: 'joined' }
+  return { ok: true, statusCode: 200, user: normalizeUserMembership(existing.toJSON()), outcome: 'joined' }
 }
 
 export async function updateUser(userId, payload, workspaceId) {
@@ -176,14 +245,14 @@ export async function updateUser(userId, payload, workspaceId) {
   const query = { _id: userId }
   const workspace = normalizeWorkspaceId(workspaceId)
   if (workspace) {
-    query.workspaceId = workspace
+    query.$or = [{ workspaceIds: workspace }, { workspaceId: workspace }]
   }
 
   const user = await UserModel.findOneAndUpdate(query, update, {
     new: true,
     runValidators: true,
   })
-  return user ? user.toJSON() : null
+  return user ? normalizeUserMembership(user.toJSON()) : null
 }
 
 export async function updatePassword(userId, passwordHash) {
@@ -225,7 +294,7 @@ export async function getUserByPasswordResetToken(tokenHash) {
 }
 
 /**
- * Detach a user from the shared workspace (solo workspaceId = their id). Does not delete the User.
+ * Detach a user from a workspace membership. Does not delete the User.
  * - Only the workspace owner (actor id === workspace root id) may remove someone else.
  * - The workspace root user row cannot be removed by others.
  * - A non-owner member may only detach themselves ("leave"); the owner cannot leave via this path.
@@ -261,15 +330,26 @@ export async function removeMemberFromWorkspace(userId, workspaceId, actorUserId
     }
   }
 
-  const user = await UserModel.findOne({ _id: userId, workspaceId: ws })
+  const user = await UserModel.findOne({
+    _id: userId,
+    $or: [{ workspaceIds: ws }, { workspaceId: ws }],
+  })
   if (!user) {
     return { ok: false, statusCode: 404, message: 'User not found in this workspace.' }
   }
 
   await unassignUserFromTasksInWorkspace(userId, ws)
 
-  user.workspaceId = user._id
+  const nextWorkspaceIds = normalizeWorkspaceIds(
+    user.workspaceIds?.map((id) => String(id)).filter((id) => id !== ws),
+    user.workspaceId ? String(user.workspaceId) : '',
+    user._id.toString()
+  )
+  user.workspaceIds = nextWorkspaceIds
+  if (String(user.workspaceId ?? '') === ws) {
+    user.workspaceId = nextWorkspaceIds[0] ?? user._id
+  }
   await user.save()
 
-  return { ok: true, user: user.toJSON() }
+  return { ok: true, user: normalizeUserMembership(user.toJSON()) }
 }

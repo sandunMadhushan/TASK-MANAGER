@@ -20,14 +20,17 @@ export async function createTask(payload) {
   return hydrated.toJSON()
 }
 
-export async function getTasksForUser(userId, workspaceId) {
+export async function getTasksForUser(userId, workspaceIds = []) {
+  const workspaceList = Array.isArray(workspaceIds)
+    ? workspaceIds.map((id) => String(id)).filter(Boolean)
+    : [String(workspaceIds)].filter(Boolean)
   const baseQuery = {
     $or: [{ createdBy: userId }, { assignedTo: userId }],
   }
-  if (workspaceId) {
+  if (workspaceList.length > 0) {
     baseQuery.$and = [
       {
-        $or: [{ workspaceId }, { workspaceId: { $exists: false } }],
+        $or: [{ workspaceId: { $in: workspaceList } }, { workspaceId: { $exists: false } }],
       },
     ]
   }
