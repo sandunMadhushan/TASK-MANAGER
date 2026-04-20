@@ -47,7 +47,7 @@ export async function meHandler(req, res, next) {
     if (!userId) {
       return res.status(401).json({ message: 'Unauthorized' })
     }
-    const user = await getUserById(userId)
+    const user = await ensureUserWorkspace(userId)
     if (!user) {
       return res.status(401).json({ message: 'Unauthorized' })
     }

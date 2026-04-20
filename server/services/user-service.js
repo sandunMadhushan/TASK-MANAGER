@@ -129,14 +129,14 @@ export async function ensureUserWorkspace(userId) {
   if (!userId) return null
   const user = await UserModel.findById(userId)
   if (!user) return null
-  if (!user.workspaceId) {
-    user.workspaceId = user._id
-  }
+  const selfWorkspaceId = String(user._id)
   user.workspaceIds = normalizeWorkspaceIds(
     user.workspaceIds?.map((id) => String(id)),
-    String(user.workspaceId),
-    String(user._id)
+    String(user.workspaceId ?? ''),
+    selfWorkspaceId
   )
+  // Keep own workspace as primary/default so joining a new team never "moves" the account.
+  user.workspaceId = selfWorkspaceId
   await user.save()
   return normalizeUserMembership(user.toJSON())
 }

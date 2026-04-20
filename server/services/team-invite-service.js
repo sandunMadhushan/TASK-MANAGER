@@ -5,6 +5,26 @@ function normalizeEmail(email) {
   return String(email ?? '').trim().toLowerCase()
 }
 
+function normalizeWorkspaceId(workspaceId) {
+  if (!workspaceId) return null
+  return String(workspaceId)
+}
+
+function normalizeWorkspaceIds(rawWorkspaceIds, fallbackWorkspaceId, userId) {
+  const set = new Set()
+  if (Array.isArray(rawWorkspaceIds)) {
+    for (const id of rawWorkspaceIds) {
+      const normalized = normalizeWorkspaceId(id)
+      if (normalized) set.add(normalized)
+    }
+  }
+  const fallback = normalizeWorkspaceId(fallbackWorkspaceId)
+  if (fallback) set.add(fallback)
+  const self = normalizeWorkspaceId(userId)
+  if (self) set.add(self)
+  return Array.from(set)
+}
+
 export async function createTeamInvite(payload) {
   const workspaceId = String(payload.workspaceId ?? '')
   const targetUserIdRaw = payload.targetUserId
@@ -64,15 +84,17 @@ export async function acceptTeamInvite(inviteId, currentUser) {
   const user = await UserModel.findById(currentUser.id)
   if (!user) return { ok: false, statusCode: 404, message: 'User not found.' }
   const workspaceId = String(invite.workspaceId)
-  const currentWorkspaceIds = Array.isArray(user.workspaceIds)
-    ? user.workspaceIds.map((id) => String(id))
-    : []
-  if (!currentWorkspaceIds.includes(workspaceId)) {
-    user.workspaceIds = [...currentWorkspaceIds, workspaceId]
+  const nextWorkspaceIds = normalizeWorkspaceIds(
+    user.workspaceIds,
+    user.workspaceId,
+    user._id
+  )
+  if (!nextWorkspaceIds.includes(workspaceId)) {
+    nextWorkspaceIds.push(workspaceId)
   }
-  if (!user.workspaceId) {
-    user.workspaceId = workspaceId
-  }
+  user.workspaceIds = nextWorkspaceIds
+  // Keep the account's own workspace as primary; joined teams stay in workspaceIds.
+  user.workspaceId = String(user._id)
   await user.save()
 
   invite.status = 'accepted'
