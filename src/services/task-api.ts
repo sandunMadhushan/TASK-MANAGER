@@ -84,6 +84,17 @@ function toDateInputValue(value: string): string {
   return `${y}-${m}-${d}`
 }
 
+export class ApiRequestError extends Error {
+  readonly status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiRequestError'
+    this.status = status
+    Object.setPrototypeOf(this, new.target.prototype)
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const requestUrl = `${API_BASE_URL}${path}`
   const token = authTokenGetter?.()
@@ -98,19 +109,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   const response = await fetchWithTransientRetry(requestUrl, requestInit)
+  const text = await response.text()
 
   if (!response.ok) {
     let message = `Request failed with status ${response.status}`
-    try {
-      const body = (await response.json()) as { message?: string }
-      if (body.message) message = body.message
-    } catch {
-      // Keep fallback message when response is not JSON.
+    if (text.trim()) {
+      try {
+        const body = JSON.parse(text) as { message?: string }
+        if (body.message) message = body.message
+      } catch {
+        // Keep fallback message when response is not JSON.
+      }
     }
-    throw new Error(message)
+    throw new ApiRequestError(message, response.status)
   }
 
-  return (await response.json()) as T
+  if (!text.trim()) return {} as T
+  return JSON.parse(text) as T
 }
 
 /** WebView fetch blocks mixed content (https page → http API). Tauri’s HTTP plugin uses the OS client instead. */
@@ -315,6 +330,12 @@ export async function updateProjectApi(
   return request<Project>(`/projects/${projectId}`, {
     method: 'PATCH',
     body: JSON.stringify(input),
+  })
+}
+
+export async function deleteProjectApi(projectId: string): Promise<void> {
+  await request<{ deleted?: boolean }>(`/projects/${projectId}`, {
+    method: 'DELETE',
   })
 }
 

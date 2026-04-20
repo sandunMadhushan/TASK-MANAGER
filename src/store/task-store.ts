@@ -2,8 +2,10 @@ import { create } from 'zustand'
 import { toast } from 'sonner'
 
 import {
+  ApiRequestError,
   createProjectApi,
   createTaskApi,
+  deleteProjectApi,
   deleteTaskApi,
   fetchProjectsApi,
   fetchTasksApi,
@@ -37,6 +39,9 @@ type TaskStore = {
     id: string,
     input: { name?: string; description?: string; status?: 'active' | 'archived' }
   ) => Promise<boolean>
+  deleteProject: (
+    id: string
+  ) => Promise<{ ok: true } | { ok: false; blocked: boolean; message: string }>
   addTask: (
     input: Pick<Task, 'title' | 'description' | 'status' | 'dueDate' | 'assignedToIds'> & { projectId: string }
   ) => Promise<boolean>
@@ -172,6 +177,28 @@ export const useTaskStore = create<TaskStore>((set) => ({
       set({ error: message })
       toast.error('Project update failed', { description: message })
       return false
+    }
+  },
+  deleteProject: async (id) => {
+    try {
+      await deleteProjectApi(id)
+      set((s) => {
+        const nextProjects = s.projects.filter((p) => p.id !== id)
+        const nextActive = s.activeProjectId === id ? null : s.activeProjectId
+        return { projects: nextProjects, activeProjectId: nextActive, error: null }
+      })
+      void useTaskStore.getState().fetchTasks({ silent: true })
+      toast.success('Project deleted')
+      return { ok: true }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to delete project. Please try again.'
+      if (error instanceof ApiRequestError && error.status === 409) {
+        return { ok: false, blocked: true, message }
+      }
+      set({ error: message })
+      toast.error('Could not delete project', { description: message })
+      return { ok: false, blocked: false, message }
     }
   },
   addTask: async (input) => {

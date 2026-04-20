@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion'
-import { Archive, ArrowUpDown, Pencil, Plus, Search } from 'lucide-react'
+import { ArrowUpDown, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { CreateTaskModal } from '@/components/tasks/CreateTaskModal'
 import { TaskListView } from '@/components/tasks/TaskListView'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -16,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useTaskStore } from '@/store/task-store'
+import type { Project } from '@/types/project'
 import type { TaskStatus } from '@/types/task'
 import { useSettingsStore } from '@/store/settings-store'
 import { useAuthStore } from '@/store/auth-store'
@@ -34,13 +36,17 @@ export function TasksPage() {
   const setActiveProjectId = useTaskStore((s) => s.setActiveProjectId)
   const addProject = useTaskStore((s) => s.addProject)
   const editProject = useTaskStore((s) => s.editProject)
+  const deleteProject = useTaskStore((s) => s.deleteProject)
   const currentUser = useAuthStore((s) => s.currentUser)
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
   const [projectName, setProjectName] = useState('')
-  const [showArchivedProjects, setShowArchivedProjects] = useState(false)
   const [projectEditDialogOpen, setProjectEditDialogOpen] = useState(false)
   const [projectEditingId, setProjectEditingId] = useState<string | null>(null)
   const [projectEditingName, setProjectEditingName] = useState('')
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [deleteBlockedOpen, setDeleteBlockedOpen] = useState(false)
+  const [deleteBlockedMessage, setDeleteBlockedMessage] = useState('')
   const assigneeFilter = searchParams.get('assignee') ?? 'all'
   const searchText = searchParams.get('q') ?? ''
   const assigneeLabel =
@@ -100,18 +106,54 @@ export function TasksPage() {
       .map(([workspaceId, entry]) => ({
         workspaceId,
         label: entry.label,
-        items: [...entry.items].sort((a, b) => a.name.localeCompare(b.name)),
+        items: [...entry.items].sort((a, b) => {
+          const ar = a.status === 'archived' ? 1 : 0
+          const br = b.status === 'archived' ? 1 : 0
+          if (ar !== br) return ar - br
+          return a.name.localeCompare(b.name)
+        }),
       }))
       .sort((a, b) => a.label.localeCompare(b.label))
   }, [projects, workspaceNameById, rosterNameByUserId])
-  const groupedProjectsForFilter = useMemo(() => {
-    return groupedProjects
-      .map((group) => ({
-        ...group,
-        items: group.items.filter((project) => showArchivedProjects || project.status === 'active'),
-      }))
-      .filter((group) => group.items.length > 0)
-  }, [groupedProjects, showArchivedProjects])
+
+  function projectRowLabel(project: Project) {
+    return project.status === 'archived' ? `${project.name} · closed` : project.name
+  }
+
+  function countOpenTasksInProject(projectId: string) {
+    return tasks.filter(
+      (t) =>
+        t.projectId === projectId &&
+        (t.status === 'todo' || t.status === 'in-progress')
+    ).length
+  }
+
+  function openDeleteProjectDialog(project: Project) {
+    const openCount = countOpenTasksInProject(project.id)
+    if (openCount > 0) {
+      setDeleteBlockedMessage(
+        openCount === 1
+          ? 'This project still has 1 open task (to do or in progress). Complete or move it before deleting.'
+          : `This project still has ${openCount} open tasks (to do or in progress). Complete or move them before deleting.`
+      )
+      setDeleteBlockedOpen(true)
+      return
+    }
+    setDeleteTarget({ id: project.id, name: project.name })
+    setDeleteConfirmOpen(true)
+  }
+
+  async function confirmDeleteProject() {
+    if (!deleteTarget) return
+    const result = await deleteProject(deleteTarget.id)
+    setDeleteConfirmOpen(false)
+    setDeleteTarget(null)
+    if (result.ok) return
+    if (result.blocked) {
+      setDeleteBlockedMessage(result.message)
+      setDeleteBlockedOpen(true)
+    }
+  }
 
   function openCreateModal() {
     setCreateSession((s) => s + 1)
@@ -142,14 +184,6 @@ export function TasksPage() {
     setProjectEditDialogOpen(false)
     setProjectEditingId(null)
     setProjectEditingName('')
-  }
-
-  async function handleArchiveProject(projectId: string) {
-    const ok = await editProject(projectId, { status: 'archived' })
-    if (!ok) return
-    if (activeProjectId === projectId) {
-      setActiveProjectId(null)
-    }
   }
 
   function updateAssigneeFilter(value: string | null) {
@@ -270,6 +304,56 @@ export function TasksPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          setDeleteConfirmOpen(open)
+          if (!open) setDeleteTarget(null)
+        }}
+      >
+        <DialogContent className="border-white/10 bg-popover/95 backdrop-blur-xl sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete project?</DialogTitle>
+            <DialogDescription className="space-y-2 text-left">
+              <span className="block">
+                <span className="font-medium text-foreground">{deleteTarget?.name}</span> will be
+                removed permanently. Any completed tasks in this project are deleted with it.
+              </span>
+              <span className="block">You cannot delete while tasks are still to do or in progress.</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setDeleteConfirmOpen(false)
+                setDeleteTarget(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" onClick={() => void confirmDeleteProject()}>
+              Delete project
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteBlockedOpen} onOpenChange={setDeleteBlockedOpen}>
+        <DialogContent className="border-amber-500/35 bg-amber-950/20 shadow-lg shadow-amber-900/20 backdrop-blur-xl sm:max-w-md dark:bg-amber-950/30">
+          <DialogHeader>
+            <DialogTitle className="text-amber-100">Cannot delete yet</DialogTitle>
+            <DialogDescription className="text-amber-100/85">{deleteBlockedMessage}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button type="button" variant="secondary" onClick={() => setDeleteBlockedOpen(false)}>
+              Understood
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <motion.div
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
@@ -343,14 +427,14 @@ export function TasksPage() {
               </SelectTrigger>
               <SelectContent side="bottom" sideOffset={8} align="start" alignItemWithTrigger={false}>
                 <SelectItem value="__all__">All projects</SelectItem>
-                {groupedProjectsForFilter.map((group) => (
+                {groupedProjects.map((group) => (
                   <div key={`project-group-${group.workspaceId}`}>
                     <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                       {group.label}
                     </p>
                     {group.items.map((project) => (
                       <SelectItem key={project.id} value={project.id}>
-                        {project.name}
+                        {projectRowLabel(project)}
                       </SelectItem>
                     ))}
                   </div>
@@ -378,17 +462,6 @@ export function TasksPage() {
               </SelectContent>
             </Select>
           </div>
-        </div>
-
-        <div className="mt-2 flex justify-end">
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => setShowArchivedProjects((v) => !v)}
-          >
-            {showArchivedProjects ? 'Hide archived projects' : 'Show archived projects'}
-          </Button>
         </div>
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-3">
@@ -423,61 +496,89 @@ export function TasksPage() {
       </section>
 
       <section className="rounded-2xl border border-white/10 bg-white/4 p-3 backdrop-blur-md sm:p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-heading text-lg font-semibold tracking-tight">Projects</h2>
-          <p className="text-xs text-muted-foreground">
-            {projects.filter((p) => p.status === 'active').length} active / {projects.length} total
+        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="font-heading text-lg font-semibold tracking-tight">Projects</h2>
+            <p className="mt-0.5 max-w-xl text-xs text-muted-foreground">
+              Projects belong to a workspace (team). Only open projects accept new tasks. Delete removes
+              the project and completed tasks; open tasks must be finished or moved first.
+            </p>
+          </div>
+          <p className="shrink-0 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-muted-foreground">
+            {projects.filter((p) => p.status === 'active').length} open for tasks
+            <span className="text-white/25"> · </span>
+            {projects.length} total
           </p>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-4">
           {groupedProjects.map((group) => {
             const canManage = currentUser?.id === group.workspaceId
             return (
-              <div key={`project-manage-${group.workspaceId}`} className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {group.label}
-                </p>
-                <div className="space-y-2">
-                  {group.items.map((project) => (
-                    <div
-                      key={`project-row-${project.id}`}
-                      className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">{project.name}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {project.status === 'archived' ? 'Archived' : 'Active'}
-                        </p>
-                      </div>
-                      {canManage ? (
-                        <div className="inline-flex items-center gap-1">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="size-7"
-                            onClick={() => openEditProject(project.id, project.name)}
-                            aria-label={`Rename ${project.name}`}
-                          >
-                            <Pencil className="size-3.5" />
-                          </Button>
-                          {project.status !== 'archived' ? (
+              <div
+                key={`project-manage-${group.workspaceId}`}
+                className="overflow-hidden rounded-xl border border-white/10 bg-linear-to-b from-white/[0.07] to-black/20"
+              >
+                <div className="border-b border-white/10 bg-white/4 px-3 py-2.5 sm:px-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Workspace
+                  </p>
+                  <p className="truncate text-sm font-medium text-foreground">{group.label}</p>
+                </div>
+                <ul className="divide-y divide-white/10 p-2 sm:p-3">
+                  {group.items.map((project) => {
+                    const openTaskCount = countOpenTasksInProject(project.id)
+                    return (
+                      <li
+                        key={`project-row-${project.id}`}
+                        className="flex flex-col gap-2 py-2.5 first:pt-1 last:pb-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="truncate text-sm font-medium text-foreground">{project.name}</p>
+                            {project.status === 'archived' ? (
+                              <Badge variant="outline" className="text-[10px]">
+                                Closed
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-[10px]">
+                                Open
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {openTaskCount > 0
+                              ? `${openTaskCount} open ${openTaskCount === 1 ? 'task' : 'tasks'} (to do or in progress)`
+                              : 'No open tasks — safe to delete if you do not need completed history'}
+                          </p>
+                        </div>
+                        {canManage ? (
+                          <div className="flex shrink-0 items-center justify-end gap-1 sm:pl-2">
                             <Button
                               type="button"
                               size="icon"
                               variant="ghost"
-                              className="size-7"
-                              onClick={() => void handleArchiveProject(project.id)}
-                              aria-label={`Archive ${project.name}`}
+                              className="size-8 text-muted-foreground hover:text-foreground"
+                              onClick={() => openEditProject(project.id, project.name)}
+                              aria-label={`Rename ${project.name}`}
                             >
-                              <Archive className="size-3.5" />
+                              <Pencil className="size-3.5" />
                             </Button>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="size-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => openDeleteProjectDialog(project)}
+                              aria-label={`Delete ${project.name}`}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
+                        ) : null}
+                      </li>
+                    )
+                  })}
+                </ul>
               </div>
             )
           })}

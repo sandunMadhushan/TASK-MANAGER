@@ -1,5 +1,6 @@
 import {
   createProject,
+  deleteProjectIfAllowed,
   getProjectById,
   getProjectsForUser,
   updateProject,
@@ -41,6 +42,33 @@ export async function createProjectHandler(req, res, next) {
     if (error?.code === 11000) {
       return res.status(409).json({ message: 'A project with this name already exists.' })
     }
+    return next(error)
+  }
+}
+
+export async function deleteProjectHandler(req, res, next) {
+  try {
+    const actorId = String(req.user?.id ?? '')
+    const actorWorkspaceId = String(req.user?.workspaceId ?? '')
+    if (!actorId || !actorWorkspaceId || actorId !== actorWorkspaceId) {
+      return res.status(403).json({ message: 'Only workspace owner can delete projects.' })
+    }
+    const { projectId } = req.params
+    if (!projectId) {
+      return res.status(400).json({ message: 'Missing projectId.' })
+    }
+
+    const existing = await getProjectById(projectId)
+    if (!existing || String(existing.workspaceId) !== actorWorkspaceId) {
+      return res.status(404).json({ message: 'Project not found.' })
+    }
+
+    const result = await deleteProjectIfAllowed(projectId)
+    if (!result.ok) {
+      return res.status(result.statusCode).json({ message: result.message })
+    }
+    return res.status(200).json({ deleted: true })
+  } catch (error) {
     return next(error)
   }
 }

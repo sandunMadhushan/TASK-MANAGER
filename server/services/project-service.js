@@ -1,4 +1,5 @@
 import { ProjectModel } from '../models/project-model.js'
+import { TaskModel } from '../models/task-model.js'
 
 function normalizeWorkspaceIds(value) {
   if (Array.isArray(value)) return value.map((id) => String(id)).filter(Boolean)
@@ -41,4 +42,29 @@ export async function updateProject(projectId, payload) {
     runValidators: true,
   })
   return row ? row.toJSON() : null
+}
+
+/**
+ * Deletes a project when it has no open tasks (to do or in progress).
+ * Removes remaining tasks (e.g. done) and the project document.
+ */
+export async function deleteProjectIfAllowed(projectId) {
+  const project = await ProjectModel.findById(projectId)
+  if (!project) {
+    return { ok: false, statusCode: 404, message: 'Project not found.' }
+  }
+  const blocking = await TaskModel.countDocuments({
+    projectId: project._id,
+    status: { $in: ['todo', 'in-progress'] },
+  })
+  if (blocking > 0) {
+    return {
+      ok: false,
+      statusCode: 409,
+      message: `This project still has ${blocking} open ${blocking === 1 ? 'task' : 'tasks'} (to do or in progress). Complete or move them before deleting.`,
+    }
+  }
+  await TaskModel.deleteMany({ projectId: project._id })
+  await ProjectModel.findByIdAndDelete(project._id)
+  return { ok: true }
 }
