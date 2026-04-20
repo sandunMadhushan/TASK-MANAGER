@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { Toaster } from "@/components/ui/sonner";
+import { checkForDesktopUpdate } from "@/lib/desktop-updater";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { HomePage } from "@/pages/HomePage";
