@@ -89,7 +89,10 @@ export async function getUsers(workspaceId) {
   )
   const owners = await UserModel.find({ _id: { $in: Array.from(workspaceRoots) } })
   const ownerById = new Map(
-    owners.map((o) => [String(o._id), o.name || o.email || String(o._id)])
+    owners.map((o) => [
+      String(o._id),
+      o.workspaceName || o.name || o.email || String(o._id),
+    ])
   )
 
   return normalizedUsers.map((user) => ({
@@ -271,6 +274,34 @@ export async function updatePassword(userId, passwordHash) {
     { new: true, runValidators: true }
   )
   return user ? user.toJSON() : null
+}
+
+export async function updateWorkspaceName(workspaceId, actorUserId, workspaceName) {
+  const ws = normalizeWorkspaceId(workspaceId)
+  const actor = normalizeWorkspaceId(actorUserId)
+  const name = String(workspaceName ?? '').trim()
+  if (!ws || !actor) {
+    return { ok: false, statusCode: 400, message: 'Workspace is missing.' }
+  }
+  if (ws !== actor) {
+    return { ok: false, statusCode: 403, message: 'Only the workspace owner can rename this group.' }
+  }
+  if (!name) {
+    return { ok: false, statusCode: 400, message: 'Group name is required.' }
+  }
+  if (name.length > 80) {
+    return { ok: false, statusCode: 400, message: 'Group name must be 80 characters or fewer.' }
+  }
+
+  const updated = await UserModel.findByIdAndUpdate(
+    ws,
+    { workspaceName: name },
+    { new: true, runValidators: true }
+  )
+  if (!updated) {
+    return { ok: false, statusCode: 404, message: 'Workspace owner not found.' }
+  }
+  return { ok: true, workspaceName: updated.workspaceName || updated.name }
 }
 
 export async function setPasswordResetTokenByEmail(email, tokenHash, expiresAt) {

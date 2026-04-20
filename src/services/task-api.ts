@@ -274,6 +274,16 @@ export async function deleteUserApi(userId: string): Promise<{ message: string }
   })
 }
 
+export async function updateWorkspaceNameApi(
+  workspaceId: string,
+  workspaceName: string
+): Promise<{ message: string; workspaceName: string }> {
+  return request<{ message: string; workspaceName: string }>(`/users/workspaces/${workspaceId}/name`, {
+    method: 'PATCH',
+    body: JSON.stringify({ workspaceName }),
+  })
+}
+
 export type NovuSubscriberAuth = {
   subscriberId: string
   subscriberHash: string | null

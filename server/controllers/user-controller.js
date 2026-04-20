@@ -2,6 +2,7 @@ import {
   getUserByEmail,
   getUsers,
   removeMemberFromWorkspace,
+  updateWorkspaceName,
   updateUser,
 } from '../services/user-service.js'
 import { createNovuSubscriberHash } from '../services/novu-auth-service.js'
@@ -233,6 +234,24 @@ export async function deleteUserHandler(req, res, next) {
     return res.status(200).json({
       message,
       user: result.user,
+    })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+export async function updateWorkspaceNameHandler(req, res, next) {
+  try {
+    const actorId = req.user?.id
+    const { workspaceId } = req.params
+    const workspaceName = String(req.body?.workspaceName ?? '').trim()
+    const result = await updateWorkspaceName(workspaceId, actorId, workspaceName)
+    if (!result.ok) {
+      return res.status(result.statusCode).json({ message: result.message })
+    }
+    return res.status(200).json({
+      message: 'Group name updated.',
+      workspaceName: result.workspaceName,
     })
   } catch (error) {
     return next(error)

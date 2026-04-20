@@ -23,6 +23,12 @@ const userSchema = new mongoose.Schema(
       default: '',
       maxlength: 3000000,
     },
+    workspaceName: {
+      type: String,
+      trim: true,
+      default: '',
+      maxlength: 80,
+    },
     passwordHash: {
       type: String,
       required: true,

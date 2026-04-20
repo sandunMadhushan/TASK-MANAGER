@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { CheckCircle2, ListChecks, LogOut, Mail, Plus, Timer, Trash2, Users } from 'lucide-react'
+import { CheckCircle2, ListChecks, LogOut, Mail, Pencil, Plus, Timer, Trash2, Users } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
@@ -21,6 +21,7 @@ import {
   createUserApi,
   deleteUserApi,
   fetchWorkspacePendingInvitesApi,
+  updateWorkspaceNameApi,
   type TeamInviteItem,
 } from '@/services/task-api'
 import { useAuthStore } from '@/store/auth-store'
@@ -44,6 +45,7 @@ export function TeamPage() {
   const [manageUsersOpen, setManageUsersOpen] = useState(false)
   const [pendingInvites, setPendingInvites] = useState<TeamInviteItem[]>([])
   const [cancellingInviteId, setCancellingInviteId] = useState<string | null>(null)
+  const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null)
 
   function safeText(value: unknown, fallback: string): string {
     return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback
@@ -222,6 +224,23 @@ export function TeamPage() {
     }
   }
 
+  async function handleRenameGroup(groupId: string, currentName: string) {
+    if (!currentUser?.id || currentUser.id !== groupId) return
+    const nextName = window.prompt('Enter new group name', currentName)?.trim()
+    if (!nextName || nextName === currentName) return
+    setRenamingGroupId(groupId)
+    try {
+      await updateWorkspaceNameApi(groupId, nextName)
+      await Promise.all([fetchUsers(), useAuthStore.getState().bootstrap()])
+      toast.success('Group name updated')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to update group name.'
+      toast.error('Failed to update group name', { description: message })
+    } finally {
+      setRenamingGroupId(null)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -339,11 +358,6 @@ export function TeamPage() {
                       ) : null}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">{safeText(user.email, 'No email')}</p>
-                    {Array.isArray(user.workspaceNames) && user.workspaceNames.length > 0 ? (
-                      <p className="mt-1 text-[11px] text-muted-foreground">
-                        Groups: {user.workspaceNames.join(', ')}
-                      </p>
-                    ) : null}
                   </div>
                   <div className="inline-flex flex-wrap items-center gap-2">
                     {isWorkspaceOwner && String(user.id) !== workspaceRootId ? (
@@ -415,9 +429,25 @@ export function TeamPage() {
             return (
               <section key={`group-${group.id}`} className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold tracking-wide text-foreground">
-                    Group: {group.name}
-                  </h2>
+                  <div className="inline-flex items-center gap-2">
+                    <h2 className="text-sm font-semibold tracking-wide text-foreground">
+                      Group: {group.name}
+                    </h2>
+                    {currentUser?.id === group.id ? (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="size-6"
+                        disabled={renamingGroupId === group.id}
+                        onClick={() => void handleRenameGroup(group.id, group.name)}
+                        aria-label={`Edit group name ${group.name}`}
+                        title="Edit group name"
+                      >
+                        <Pencil className="size-3.5" />
+                      </Button>
+                    ) : null}
+                  </div>
                   <p className="text-xs text-muted-foreground">{members.length} member(s)</p>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
