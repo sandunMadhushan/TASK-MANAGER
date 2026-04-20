@@ -6,6 +6,7 @@ import {
   updateTask,
   updateTaskStatus,
 } from '../services/task-service.js'
+import { getProjectById } from '../services/project-service.js'
 import { getUserById, getUsersByIds } from '../services/user-service.js'
 import {
   notifyTaskAssigned,
@@ -17,8 +18,9 @@ const statusValues = new Set(['todo', 'in-progress', 'done'])
 export async function createTaskHandler(req, res, next) {
   try {
     const currentUserId = req.user?.id
+    const workspaceIds = req.user?.workspaceIds ?? [req.user?.workspaceId]
     const workspaceId = req.user?.workspaceId
-    const { title, description, status, assignedToIds, assignedTo, dueDate } = req.body ?? {}
+    const { title, description, status, assignedToIds, assignedTo, dueDate, projectId } = req.body ?? {}
 
     if (!title || typeof title !== 'string') {
       return res.status(400).json({ message: 'title is required' })
@@ -27,13 +29,23 @@ export async function createTaskHandler(req, res, next) {
     if (!dueDate || Number.isNaN(new Date(dueDate).getTime())) {
       return res.status(400).json({ message: 'dueDate must be a valid date' })
     }
+    if (!projectId || typeof projectId !== 'string') {
+      return res.status(400).json({ message: 'projectId is required' })
+    }
+    const project = await getProjectById(projectId)
+    if (!project || !workspaceIds.map(String).includes(String(project.workspaceId))) {
+      return res.status(400).json({ message: 'projectId is invalid for your workspace' })
+    }
+    if (project.status === 'archived') {
+      return res.status(400).json({ message: 'Cannot create tasks in an archived project.' })
+    }
 
     if (status && !statusValues.has(status)) {
       return res.status(400).json({ message: 'status is invalid' })
     }
     const normalizedAssigneeIds = normalizeAssigneeIds(assignedToIds ?? assignedTo)
     if (normalizedAssigneeIds.length > 0) {
-      const users = await getUsersByIds(normalizedAssigneeIds, workspaceId)
+      const users = await getUsersByIds(normalizedAssigneeIds, project.workspaceId)
       if (users.length !== normalizedAssigneeIds.length) {
         return res.status(400).json({ message: 'One or more assigned users not found' })
       }
@@ -45,7 +57,8 @@ export async function createTaskHandler(req, res, next) {
       status,
       assignedToIds: normalizedAssigneeIds,
       createdById: currentUserId,
-      workspaceId,
+      workspaceId: project.workspaceId ?? workspaceId,
+      projectId,
       dueDate,
     })
 
@@ -62,10 +75,17 @@ export async function getTasksHandler(req, res, next) {
   try {
     const currentUserId = req.user?.id
     const workspaceIds = req.user?.workspaceIds ?? [req.user?.workspaceId]
+    const projectIdQuery = typeof req.query?.projectId === 'string' ? req.query.projectId : ''
     if (!currentUserId) {
       return res.status(401).json({ message: 'Unauthorized' })
     }
-    const tasks = await getTasksForUser(currentUserId, workspaceIds)
+    if (projectIdQuery) {
+      const project = await getProjectById(projectIdQuery)
+      if (!project || !workspaceIds.map(String).includes(String(project.workspaceId))) {
+        return res.status(400).json({ message: 'projectId is invalid for your workspace' })
+      }
+    }
+    const tasks = await getTasksForUser(currentUserId, workspaceIds, projectIdQuery || undefined)
     return res.status(200).json(tasks)
   } catch (error) {
     return next(error)
@@ -112,8 +132,9 @@ export async function updateTaskHandler(req, res, next) {
   try {
     const currentUserId = req.user?.id
     const workspaceId = req.user?.workspaceId
+    const workspaceIds = req.user?.workspaceIds ?? [workspaceId]
     const { taskId } = req.params
-    const { title, description, status, assignedToIds, assignedTo, dueDate } = req.body ?? {}
+    const { title, description, status, assignedToIds, assignedTo, dueDate, projectId } = req.body ?? {}
 
     if (title !== undefined && (!title || typeof title !== 'string')) {
       return res.status(400).json({ message: 'title is invalid' })
@@ -129,8 +150,24 @@ export async function updateTaskHandler(req, res, next) {
       ? normalizeAssigneeIds(assignedToIds ?? assignedTo)
       : undefined
 
+    let nextProjectId
+    let assigneeWorkspaceId = workspaceId
+    if (projectId !== undefined) {
+      if (!projectId || typeof projectId !== 'string') {
+        return res.status(400).json({ message: 'projectId must be a valid id' })
+      }
+      const project = await getProjectById(projectId)
+      if (!project || !workspaceIds.map(String).includes(String(project.workspaceId))) {
+        return res.status(400).json({ message: 'projectId is invalid for your workspace' })
+      }
+      if (project.status === 'archived') {
+        return res.status(400).json({ message: 'Cannot move task to an archived project.' })
+      }
+      nextProjectId = projectId
+      assigneeWorkspaceId = project.workspaceId
+    }
     if (normalizedAssigneeIds && normalizedAssigneeIds.length > 0) {
-      const users = await getUsersByIds(normalizedAssigneeIds, workspaceId)
+      const users = await getUsersByIds(normalizedAssigneeIds, assigneeWorkspaceId)
       if (users.length !== normalizedAssigneeIds.length) {
         return res.status(400).json({ message: 'One or more assigned users not found' })
       }
@@ -153,6 +190,7 @@ export async function updateTaskHandler(req, res, next) {
       description,
       status,
       assignedToIds: normalizedAssigneeIds,
+      projectId: nextProjectId,
       dueDate,
     })
 

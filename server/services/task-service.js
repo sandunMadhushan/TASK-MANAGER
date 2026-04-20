@@ -4,6 +4,7 @@ export async function getTaskById(taskId) {
   const task = await TaskModel.findById(taskId)
     .populate('assignedTo')
     .populate('createdBy')
+    .populate('projectId')
   return task ? task.toJSON() : null
 }
 
@@ -14,6 +15,7 @@ export async function createTask(payload) {
     status: payload.status ?? 'todo',
     assignedTo: payload.assignedToIds ?? [],
     createdBy: payload.createdById,
+    projectId: payload.projectId,
     workspaceId: payload.workspaceId,
     dueDate: payload.dueDate,
   })
@@ -21,10 +23,11 @@ export async function createTask(payload) {
   const hydrated = await TaskModel.findById(task._id)
     .populate('assignedTo')
     .populate('createdBy')
+    .populate('projectId')
   return hydrated.toJSON()
 }
 
-export async function getTasksForUser(userId, workspaceIds = []) {
+export async function getTasksForUser(userId, workspaceIds = [], projectId) {
   const workspaceList = Array.isArray(workspaceIds)
     ? workspaceIds.map((id) => String(id)).filter(Boolean)
     : [String(workspaceIds)].filter(Boolean)
@@ -38,9 +41,13 @@ export async function getTasksForUser(userId, workspaceIds = []) {
       },
     ]
   }
+  if (projectId) {
+    baseQuery.projectId = projectId
+  }
   const tasks = await TaskModel.find(baseQuery)
     .populate('assignedTo')
     .populate('createdBy')
+    .populate('projectId')
     .sort({ createdAt: -1 })
   return tasks.map((task) => task.toJSON())
 }
@@ -56,6 +63,7 @@ export async function updateTaskStatus(taskId, status) {
   const hydrated = await TaskModel.findById(task._id)
     .populate('assignedTo')
     .populate('createdBy')
+    .populate('projectId')
   return hydrated.toJSON()
 }
 
@@ -66,6 +74,7 @@ export async function updateTask(taskId, payload) {
   if (payload.status !== undefined) update.status = payload.status
   if (payload.dueDate !== undefined) update.dueDate = payload.dueDate
   if (payload.assignedToIds !== undefined) update.assignedTo = payload.assignedToIds
+  if (payload.projectId !== undefined) update.projectId = payload.projectId
 
   const task = await TaskModel.findByIdAndUpdate(taskId, update, {
     new: true,
@@ -76,6 +85,7 @@ export async function updateTask(taskId, payload) {
   const hydrated = await TaskModel.findById(task._id)
     .populate('assignedTo')
     .populate('createdBy')
+    .populate('projectId')
   return hydrated.toJSON()
 }
 

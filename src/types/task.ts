@@ -12,6 +12,8 @@ export type Task = {
   tag: string
   assignedToIds?: string[]
   assignees?: User[]
+  projectId?: string
+  projectName?: string
   createdById?: string
   createdByName?: string
   createdAt?: string

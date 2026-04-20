@@ -23,6 +23,7 @@ function App() {
   const isBootstrapping = useAuthStore((s) => s.isBootstrapping);
   const fetchTasks = useTaskStore((s) => s.fetchTasks);
   const fetchUsers = useTaskStore((s) => s.fetchUsers);
+  const fetchProjects = useTaskStore((s) => s.fetchProjects);
   const reducedMotion = useSettingsStore((s) => s.reducedMotion);
   const location = useLocation();
 
@@ -34,7 +35,8 @@ function App() {
     if (!currentUser) return;
     void fetchTasks();
     void fetchUsers();
-  }, [currentUser, fetchTasks, fetchUsers]);
+    void fetchProjects();
+  }, [currentUser, fetchTasks, fetchUsers, fetchProjects]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -44,6 +46,7 @@ function App() {
       void Promise.all([
         fetchTasks({ silent: true }),
         fetchUsers({ silent: true }),
+        fetchProjects(),
       ]);
     };
 
@@ -60,7 +63,7 @@ function App() {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [currentUser, fetchTasks, fetchUsers]);
+  }, [currentUser, fetchTasks, fetchUsers, fetchProjects]);
 
   useEffect(() => {
     const pageTitleByPath: Record<string, string> = {

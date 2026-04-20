@@ -31,6 +31,7 @@ type EditTaskModalProps = {
 export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) {
   const editTask = useTaskStore((s) => s.editTask)
   const users = useTaskStore((s) => s.users)
+  const projects = useTaskStore((s) => s.projects)
   const isUsersLoading = useTaskStore((s) => s.isUsersLoading)
   const isEditing = useTaskStore((s) => s.isEditing)
   const error = useTaskStore((s) => s.error)
@@ -40,6 +41,7 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
   const [status, setStatus] = useState<TaskStatus>(task.status)
   const [dueDate, setDueDate] = useState(task.dueDate)
   const [assignedToIds, setAssignedToIds] = useState(task.assignedToIds ?? [])
+  const [projectId, setProjectId] = useState(task.projectId ?? '')
   const [titleError, setTitleError] = useState('')
   const statusLabel: Record<TaskStatus, string> = {
     todo: 'To do',
@@ -60,6 +62,10 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
       setTitleError('Add a short title so the task is easy to find.')
       return
     }
+    if (!projectId) {
+      setTitleError('Select a project before saving.')
+      return
+    }
     setTitleError('')
     const updated = await editTask(task.id, {
       title: trimmed,
@@ -67,6 +73,7 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
       status,
       dueDate,
       assignedToIds,
+      projectId,
     })
     if (updated) {
       onOpenChange(false)
@@ -126,6 +133,29 @@ export function EditTaskModal({ task, open, onOpenChange }: EditTaskModalProps) 
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
+              </FieldContent>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor={`edit-task-project-${task.id}`}>Project</FieldLabel>
+              <FieldContent>
+                <Select value={projectId} onValueChange={(value) => setProjectId(value ?? '')}>
+                  <SelectTrigger
+                    id={`edit-task-project-${task.id}`}
+                    className="w-full min-w-0"
+                  >
+                    <SelectValue>{projects.find((project) => project.id === projectId)?.name ?? 'Select project'}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent side="bottom" sideOffset={8} align="start" alignItemWithTrigger={false}>
+                    {projects
+                      .filter((project) => project.status === 'active' || project.id === task.projectId)
+                      .map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </FieldContent>
             </Field>
 

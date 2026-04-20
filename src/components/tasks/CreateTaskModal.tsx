@@ -31,6 +31,8 @@ type CreateTaskModalProps = {
 export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
   const addTask = useTaskStore((s) => s.addTask)
   const users = useTaskStore((s) => s.users)
+  const projects = useTaskStore((s) => s.projects)
+  const activeProjectId = useTaskStore((s) => s.activeProjectId)
   const isUsersLoading = useTaskStore((s) => s.isUsersLoading)
   const isCreating = useTaskStore((s) => s.isCreating)
   const error = useTaskStore((s) => s.error)
@@ -40,6 +42,7 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
   const [status, setStatus] = useState<TaskStatus>('todo')
   const [dueDate, setDueDate] = useState(todayIsoDate())
   const [assignedToIds, setAssignedToIds] = useState<string[]>([])
+  const [projectId, setProjectId] = useState<string>(activeProjectId ?? '')
   const [titleError, setTitleError] = useState('')
   const statusLabel: Record<TaskStatus, string> = {
     todo: 'To do',
@@ -60,6 +63,10 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
       setTitleError('Add a short title so the task is easy to find.')
       return
     }
+    if (!projectId) {
+      setTitleError('Select a project before creating the task.')
+      return
+    }
     setTitleError('')
     const created = await addTask({
       title: trimmed,
@@ -67,6 +74,7 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
       status,
       dueDate,
       assignedToIds,
+      projectId,
     })
     if (created) {
       onOpenChange(false)
@@ -126,6 +134,31 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
+              </FieldContent>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="task-project">Project</FieldLabel>
+              <FieldContent>
+                <Select value={projectId} onValueChange={(value) => setProjectId(value ?? '')}>
+                  <SelectTrigger id="task-project" className="w-full min-w-0">
+                    <SelectValue>{projects.find((project) => project.id === projectId)?.name ?? 'Select project'}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent side="bottom" sideOffset={8} align="start" alignItemWithTrigger={false}>
+                    {projects
+                      .filter((project) => project.status === 'active')
+                      .map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                {projects.filter((project) => project.status === 'active').length === 0 ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    No active projects yet. Create one from the Tasks page first.
+                  </p>
+                ) : null}
               </FieldContent>
             </Field>
 

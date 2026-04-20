@@ -106,6 +106,12 @@ export function TaskCard({ task, index }: TaskCardProps) {
               <CardDescription className="line-clamp-2">
                 {task.description}
               </CardDescription>
+              <p className="text-[11px] text-muted-foreground">
+                Project:{' '}
+                <span className="font-medium text-foreground/90">
+                  {task.projectName?.trim() ? task.projectName : 'Uncategorized'}
+                </span>
+              </p>
               <p className="pt-1 text-[11px] text-muted-foreground">
                 Assigned to:{' '}
                 <span className="font-medium text-foreground/90">

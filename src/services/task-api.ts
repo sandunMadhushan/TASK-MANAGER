@@ -1,5 +1,6 @@
 import { isTauri } from '@tauri-apps/api/core'
 import { resolveApiBaseUrl } from '@/lib/runtime-env'
+import type { Project } from '@/types/project'
 import type { Task, TaskStatus } from '@/types/task'
 import type { User } from '@/types/user'
 
@@ -18,6 +19,7 @@ type TaskDto = {
   status: TaskStatus
   assignedTo?: string | User | Array<string | User> | null
   createdBy?: string | User | null
+  projectId?: string | { id?: string; name?: string } | null
   dueDate: string
   createdAt?: string
 }
@@ -45,6 +47,16 @@ function mapTaskDto(dto: TaskDto): Task {
     dto.createdBy && typeof dto.createdBy === 'object' && typeof dto.createdBy.name === 'string'
       ? dto.createdBy.name
       : undefined
+  const projectId =
+    typeof dto.projectId === 'string'
+      ? dto.projectId
+      : dto.projectId && typeof dto.projectId === 'object'
+        ? dto.projectId.id
+        : undefined
+  const projectName =
+    dto.projectId && typeof dto.projectId === 'object' && typeof dto.projectId.name === 'string'
+      ? dto.projectId.name
+      : undefined
 
   return {
     id: dto.id,
@@ -55,6 +67,8 @@ function mapTaskDto(dto: TaskDto): Task {
     dueDate: toDateInputValue(dto.dueDate),
     assignedToIds,
     assignees,
+    projectId,
+    projectName,
     createdById,
     createdByName,
     createdAt: dto.createdAt,
@@ -133,8 +147,11 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-export async function fetchTasksApi(): Promise<Task[]> {
-  const data = await request<TaskDto[]>('/tasks')
+export async function fetchTasksApi(options?: { projectId?: string }): Promise<Task[]> {
+  const search = new URLSearchParams()
+  if (options?.projectId) search.set('projectId', options.projectId)
+  const suffix = search.toString() ? `?${search.toString()}` : ''
+  const data = await request<TaskDto[]>(`/tasks${suffix}`)
   return data.map(mapTaskDto)
 }
 
@@ -198,6 +215,7 @@ type CreateTaskInput = {
   status: TaskStatus
   dueDate: string
   assignedToIds?: string[]
+  projectId: string
 }
 
 export async function createTaskApi(input: CreateTaskInput): Promise<Task> {
@@ -225,6 +243,7 @@ type UpdateTaskInput = {
   status: TaskStatus
   dueDate: string
   assignedToIds?: string[]
+  projectId?: string
 }
 
 export async function updateTaskApi(
@@ -271,6 +290,31 @@ export async function updateUserApi(userId: string, input: UserInput): Promise<U
 export async function deleteUserApi(userId: string): Promise<{ message: string }> {
   return request<{ message: string }>(`/users/${userId}`, {
     method: 'DELETE',
+  })
+}
+
+export async function fetchProjectsApi(): Promise<Project[]> {
+  const result = await request<{ projects: Project[] }>('/projects')
+  return Array.isArray(result.projects) ? result.projects : []
+}
+
+export async function createProjectApi(input: {
+  name: string
+  description?: string
+}): Promise<Project> {
+  return request<Project>('/projects', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function updateProjectApi(
+  projectId: string,
+  input: { name?: string; description?: string; status?: 'active' | 'archived' }
+): Promise<Project> {
+  return request<Project>(`/projects/${projectId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
   })
 }
 
