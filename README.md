@@ -21,10 +21,12 @@
 - Team management (invite/edit/remove members from workspace — accounts are not deleted)
 - Real-time-ready Novu inbox bell and notifications page
 - Global search, filters, sorting, and polished dark glass UI
+- **Desktop:** Tauri v1 app (Windows/macOS/Linux) sharing the same React UI
 
 ## Tech Stack
 
 - Frontend: React, Vite, TypeScript, Tailwind CSS v4, Framer Motion, Zustand, ShadCN UI
+- Desktop: **Tauri 2** (`src-tauri/`) with `@tauri-apps/plugin-http` for reliable calls to your production API (avoids WebView mixed-content / CORS edge cases)
 - Backend: Node.js, Express, MongoDB (Mongoose)
 - Auth: JWT, `bcryptjs`
 - Notifications: Novu (`@novu/api`, `@novu/react`)
@@ -33,28 +35,17 @@
 
 ```text
 .
-├── server/
-│   ├── app.js
-│   ├── index.js
-│   ├── config/
-│   ├── controllers/
-│   ├── middleware/
-│   ├── models/
-│   ├── routes/
-│   └── services/
-└── src/
-    ├── components/
-    │   ├── layout/
-    │   ├── notifications/
-    │   ├── tasks/
-    │   └── ui/
-    ├── layouts/
-    ├── pages/
-    ├── services/
-    ├── store/
-    ├── types/
-    ├── App.tsx
-    └── main.tsx
+├── server/                 # Express API (deploy to AWS EC2, PM2, etc.)
+├── src-tauri/              # Tauri desktop shell + Rust
+├── scripts/                # e.g. generate-tauri-icons.mjs
+├── docs/deployment/        # AWS, Vercel, Novu, troubleshooting
+├── src/
+│   ├── components/
+│   ├── pages/
+│   ├── services/
+│   └── …
+├── .env.example            # Local dev template
+└── .env.production.example # Vite/Tauri production build (VITE_* only)
 ```
 
 ## Getting Started
@@ -99,11 +90,12 @@ Backend default: `http://localhost:4000`
 - `npm run server:dev` - start backend with watch mode
 - `npm run server:start` - start backend normally
 - `npm run tauri:dev` - run desktop app in development
-- `npm run tauri:build` - build desktop installer/bundles
+- `npm run tauri:build` - production Vite build + Tauri installer/bundles
+- `npm run icons:generate` - convert `public/logo.png` → `src-tauri/icons/` (run when you change the logo)
 
 ## Desktop App (Tauri)
 
-Tauri scaffolding is included in `src-tauri/` so this project can run as a desktop app.
+The same React app runs inside **Tauri** (`src-tauri/`). API calls use **`@tauri-apps/plugin-http`** when running as Tauri so **HTTP** APIs (e.g. `http://` on EC2) still work from the desktop shell (WebView mixed-content rules do not apply to that path).
 
 ### One-time prerequisites (Windows)
 
@@ -111,26 +103,42 @@ Tauri scaffolding is included in `src-tauri/` so this project can run as a deskt
 - Install Visual Studio Build Tools with **MSVC + Windows SDK**
 - Ensure WebView2 runtime is installed (usually already present on Windows 10/11)
 
-### Run desktop app
+### Run desktop app (dev)
+
+Uses local Vite + default dev API URL unless you override `VITE_API_URL` in `.env`.
 
 ```bash
 npm run tauri:dev
 ```
 
-### Build desktop installer
+### Build desktop installer (production API)
+
+**Important:** `tauri build` runs `vite build` on **your machine** (or CI). It does **not** read the API server’s EC2 `.env`. Only **`VITE_*`** variables from your build environment are baked into the client.
+
+1. Copy [`.env.production.example`](./.env.production.example) → **`.env.production`** (gitignored by convention; create it locally).
+2. Set at least **`VITE_API_URL`** to your public API base, e.g. `https://api.yourdomain.com/api` (production builds reject `localhost` here).
+3. Set **`VITE_NOVU_*`** there as well if you use the Novu inbox in the packaged app.
+4. Optional: `npm run icons:generate` if you updated `public/logo.png`.
+5. Build:
 
 ```bash
 npm run tauri:build
 ```
 
+Installers appear under `src-tauri/target/release/bundle/` (e.g. `.msi` / `.exe` on Windows). The app opens **maximized** by default (`tauri.conf.json`).
+
 ## Environment Variables
 
-### Core
+**Two places:** (1) **Server** (EC2 `.env` / PM2) — secrets and DB. (2) **Frontend / Tauri build** — **`.env.production`** with **`VITE_*`** only (inlined at `vite build` time).
+
+### Core (backend — AWS / local API)
 
 - `PORT` - backend port (default `4000`)
 - `MONGODB_URI` - MongoDB connection URI
-- `CLIENT_ORIGIN` - frontend URL for CORS
-- `VITE_API_URL` - frontend API base URL
+- **`CLIENT_ORIGIN`** - One or more **exact frontend origins** for CORS and for links in emails (welcome, password reset). Use a **comma-separated** list, no path:  
+  `https://app.yourdomain.com,https://your-app.vercel.app`  
+  **First** origin is used as the base for those email links. Trailing slashes are normalized. Server enables **`credentials: true`** with CORS.
+- **`VITE_API_URL`** - Used by **Vite/Tauri builds** only (not by Node on EC2). Point it at your public API, e.g. `https://api.yourdomain.com/api`.
 
 ### Auth
 
@@ -146,10 +154,11 @@ npm run tauri:build
 - `VITE_NOVU_APPLICATION_IDENTIFIER` - Novu app identifier
 - `VITE_NOVU_BACKEND_URL` - Novu inbox backend URL for frontend
 - `VITE_NOVU_SOCKET_URL` - Novu socket URL for frontend
-- `NOVU_WORKFLOW_TASK_ASSIGNED` - workflow id for task-assigned notifications
-- `NOVU_WORKFLOW_TASK_COMPLETED` - workflow id for task-completed notifications
-- `NOVU_WORKFLOW_DEADLINE_NEAR` - workflow id for deadline reminders
-- `NOVU_WORKFLOW_PASSWORD_RESET` - workflow id for forgot-password emails
+- `NOVU_WORKFLOW_*` - workflow identifiers (use **underscores** in env names on Linux, e.g. `NOVU_WORKFLOW_TEAM_INVITE_DECLINED`, not hyphens)
+- `NOVU_WORKFLOW_TASK_ASSIGNED` - task-assigned notifications
+- `NOVU_WORKFLOW_TASK_COMPLETED` - task-completed notifications
+- `NOVU_WORKFLOW_DEADLINE_NEAR` - deadline reminders
+- `NOVU_WORKFLOW_PASSWORD_RESET` - forgot-password emails
 
 ## Authentication Flows
 
@@ -186,7 +195,7 @@ For password reset emails to work:
 
 ## API Overview
 
-Base URL: `http://localhost:4000/api`
+Default local base URL: `http://localhost:4000/api`. In production, use your deployed API (same value as **`VITE_API_URL`** without trailing slash issues).
 
 ### Auth
 
@@ -230,14 +239,23 @@ Base URL: `http://localhost:4000/api`
 
 Step-by-step deployment guides — including **using a separate Git branch** and keeping **local `.env` unchanged** for localhost — are in [`docs/deployment/`](./docs/deployment/README.md). For updating production after you commit to `master`/`main`, see [`docs/deployment/08-master-to-deployment-workflow.md`](./docs/deployment/08-master-to-deployment-workflow.md).
 
-## Deployment (AWS + Vercel + Novu)
+## Deployment (AWS + Vercel + Novu + desktop)
 
 Recommended production split:
 
-- **Backend API** on AWS (EC2) running `npm run server:start` with PM2/systemd
-- **Frontend** on Vercel (build output from Vite `dist/`)
-- **Database** on MongoDB Atlas
-- **Notifications + email workflows** on Novu
+- **Backend API** on **AWS EC2** — Node runs `npm run server:start` (often behind **Nginx** + TLS), managed with **PM2** or systemd. All **`MONGODB_URI`**, **`AUTH_JWT_SECRET`**, **`CLIENT_ORIGIN`**, **`NOVU_API_KEY`**, etc. live **only** on the server.
+- **Frontend** — **Vercel** or any static host / custom domain (e.g. `https://taskmanager.example.com`). Build = `npm run build` with **`VITE_*`** set in the host’s env or in **`.env.production`** locally before upload.
+- **Database** — MongoDB Atlas (or self-hosted)
+- **Notifications** — Novu cloud or self-hosted
+- **Desktop** — Built on a developer machine or CI with **`.env.production`**; installers do not bundle server secrets.
+
+### AWS API checklist (CORS)
+
+If the browser or a hosted SPA shows **“Failed to fetch”** for login/signup but **`GET /api/health`** works, the frontend **Origin** is usually missing from **`CLIENT_ORIGIN`**. After changing it on EC2:
+
+```bash
+pm2 restart <your-api-process>
+```
 
 ### Deployment docs map
 
@@ -253,19 +271,19 @@ Recommended production split:
 
 ### Production checklist
 
-- Backend env configured (`MONGODB_URI`, `CLIENT_ORIGIN`, `AUTH_*`, `NOVU_*`)
-- Frontend Vercel env configured (`VITE_API_URL`, `VITE_NOVU_*`)
-- `vercel.json` SPA rewrite active (prevents refresh 404 on routes)
-- Novu workflows created and published with matching identifiers
-- Backend restarted after env changes
-- Frontend redeployed after `VITE_*` changes
+- **EC2:** `MONGODB_URI`, **`CLIENT_ORIGIN`** (all SPA origins that call the API, comma-separated), `AUTH_*`, `NOVU_*`; restart PM2 after edits
+- **SPA host (Vercel / static):** `VITE_API_URL`, `VITE_NOVU_*`; redeploy after any `VITE_*` change
+- **Tauri release:** `.env.production` with production `VITE_*`; `npm run tauri:build`; attach binaries to your GitHub Release if you ship installers
+- `vercel.json` SPA rewrite active where applicable (prevents refresh 404 on routes)
+- Novu workflows created and published with identifiers matching **`NOVU_WORKFLOW_*`** (underscore names on server)
 
 ## Production Notes
 
 - Use a strong, private `AUTH_JWT_SECRET`
 - Use production-grade MongoDB and backups
 - Configure real email sending provider in Novu
-- Set proper `CLIENT_ORIGIN` and HTTPS
+- Use **HTTPS** for the public API in production when possible; the desktop app can still call **HTTP** APIs via the Tauri HTTP plugin, but browsers require HTTPS for secure contexts
+- Keep **`CLIENT_ORIGIN`** in sync with every frontend origin (custom domain + Vercel preview/production if both are used)
 - Consider rate-limiting auth endpoints before public launch
 
 ## License
