@@ -137,6 +137,8 @@ This project is wired to use the Tauri updater with GitHub Releases:
 - App also performs a silent startup check in desktop builds
 - If an update exists, the app shows a themed toast with **Install now** / **Later** actions (no browser confirm popup)
 - CI workflow (`.github/workflows/desktop-release.yml`) builds signed desktop artifacts on `v*` tags and publishes release assets automatically
+- **Updater package policy (Windows):** release metadata now publishes separate updater targets for both **MSI** and **EXE** installs, so each installed type can receive auto-updates through its matching package.
+- Desktop deep-link support is configured for `nexustasks://...` (used by the reset-password success flow to open the installed app from browser).
 
 Before shipping updater-enabled releases, you must configure signing:
 
@@ -216,6 +218,11 @@ For release checklist in this branch, follow the version bump -> tag push -> Git
 3. Novu sends reset email with reset URL
 4. User opens `/reset-password?token=...`
 5. User sets new password
+6. After successful reset, web triggers `nexustasks://open?source=reset-password` to open installed desktop app and then falls back to `/login`
+
+Notes:
+
+- Password reset does **not** auto-login on web or desktop; user signs in manually with the new password.
 
 ## Novu Setup (Important)
 
