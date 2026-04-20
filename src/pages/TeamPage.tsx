@@ -45,6 +45,15 @@ export function TeamPage() {
   const [pendingInvites, setPendingInvites] = useState<TeamInviteItem[]>([])
   const [cancellingInviteId, setCancellingInviteId] = useState<string | null>(null)
 
+  function safeText(value: unknown, fallback: string): string {
+    return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback
+  }
+
+  function safeInitials(value: unknown): string {
+    const text = safeText(value, 'U')
+    return text.slice(0, 2).toUpperCase()
+  }
+
   const statsByUser = useMemo(() => {
     const map = new Map<
       string,
@@ -68,7 +77,7 @@ export function TeamPage() {
   const visibleUsers = useMemo(() => {
     if (!searchText) return users
     return users.filter((user) => {
-      const haystack = `${user.name} ${user.email}`.toLowerCase()
+      const haystack = `${safeText(user.name, '')} ${safeText(user.email, '')}`.toLowerCase()
       return haystack.includes(searchText)
     })
   }, [searchText, users])
@@ -296,17 +305,17 @@ export function TeamPage() {
                   <div className="min-w-0">
                     <p className="inline-flex items-center gap-2 truncate text-sm font-medium text-foreground">
                       <Avatar size="sm">
-                        <AvatarImage alt={user.name} src={user.avatarUrl} />
-                        <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                        <AvatarImage alt={safeText(user.name, 'Unknown user')} src={user.avatarUrl} />
+                        <AvatarFallback>{safeInitials(user.name)}</AvatarFallback>
                       </Avatar>
-                      {user.name}
+                      {safeText(user.name, 'Unknown user')}
                       {currentUser?.id === user.id ? (
                         <span className="ml-1.5 rounded-full border border-violet-300/35 bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-violet-200">
                           You
                         </span>
                       ) : null}
                     </p>
-                    <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                    <p className="truncate text-xs text-muted-foreground">{safeText(user.email, 'No email')}</p>
                     {Array.isArray(user.workspaceNames) && user.workspaceNames.length > 0 ? (
                       <p className="mt-1 text-[11px] text-muted-foreground">
                         Groups: {user.workspaceNames.join(', ')}
@@ -385,10 +394,10 @@ export function TeamPage() {
               <CardHeader className="pb-2">
                 <CardTitle className="inline-flex items-center gap-2 text-base">
                   <Avatar size="sm">
-                    <AvatarImage alt={user.name} src={user.avatarUrl} />
-                    <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                    <AvatarImage alt={safeText(user.name, 'Unknown user')} src={user.avatarUrl} />
+                    <AvatarFallback>{safeInitials(user.name)}</AvatarFallback>
                   </Avatar>
-                  {user.name}
+                  {safeText(user.name, 'Unknown user')}
                   {currentUser?.id === user.id ? (
                     <span className="rounded-full border border-violet-300/35 bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-200">
                       You
@@ -399,7 +408,7 @@ export function TeamPage() {
               <CardContent className="space-y-3 pt-0 text-sm text-muted-foreground">
                 <p className="inline-flex items-center gap-2">
                   <Mail className="size-3.5" />
-                  {user.email}
+                  {safeText(user.email, 'No email')}
                 </p>
                 {Array.isArray(user.workspaceNames) && user.workspaceNames.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
