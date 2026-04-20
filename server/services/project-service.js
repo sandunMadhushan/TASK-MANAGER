@@ -36,6 +36,7 @@ export async function updateProject(projectId, payload) {
   if (payload.name !== undefined) update.name = payload.name
   if (payload.description !== undefined) update.description = payload.description
   if (payload.status !== undefined) update.status = payload.status
+  if (payload.workspaceId !== undefined) update.workspaceId = payload.workspaceId
 
   const row = await ProjectModel.findByIdAndUpdate(projectId, update, {
     new: true,

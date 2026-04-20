@@ -1,3 +1,4 @@
+import { TaskModel } from '../models/task-model.js'
 import {
   createProject,
   deleteProjectIfAllowed,
@@ -7,6 +8,17 @@ import {
 } from '../services/project-service.js'
 
 const projectStatusValues = new Set(['active', 'archived'])
+
+function workspaceIdsForUser(req) {
+  const raw = req.user?.workspaceIds ?? [req.user?.workspaceId]
+  const list = (Array.isArray(raw) ? raw : [raw]).map((id) => String(id)).filter(Boolean)
+  return [...new Set(list)]
+}
+
+/** Workspace “root” id: only this user may manage projects in that workspace (rename/delete/move). */
+function userOwnsWorkspaceRoot(req, workspaceId) {
+  return String(req.user?.id ?? '') === String(workspaceId ?? '')
+}
 
 export async function getProjectsHandler(req, res, next) {
   try {
@@ -21,9 +33,17 @@ export async function getProjectsHandler(req, res, next) {
 export async function createProjectHandler(req, res, next) {
   try {
     const actorId = String(req.user?.id ?? '')
-    const workspaceId = String(req.user?.workspaceId ?? '')
-    if (!actorId || !workspaceId || actorId !== workspaceId) {
-      return res.status(403).json({ message: 'Only workspace owner can create projects.' })
+    if (!actorId) {
+      return res.status(401).json({ message: 'Unauthorized' })
+    }
+    const allowed = workspaceIdsForUser(req)
+    const defaultWs = String(req.user?.workspaceId ?? req.user?.id ?? '')
+    const requested =
+      req.body?.workspaceId !== undefined && String(req.body.workspaceId).trim() !== ''
+        ? String(req.body.workspaceId).trim()
+        : defaultWs
+    if (!allowed.includes(requested)) {
+      return res.status(400).json({ message: 'Pick a workspace you belong to.' })
     }
     const name = String(req.body?.name ?? '').trim()
     const description = String(req.body?.description ?? '').trim()
@@ -34,7 +54,7 @@ export async function createProjectHandler(req, res, next) {
     const project = await createProject({
       name,
       description,
-      workspaceId,
+      workspaceId: requested,
       createdBy: actorId,
     })
     return res.status(201).json(project)
@@ -49,9 +69,8 @@ export async function createProjectHandler(req, res, next) {
 export async function deleteProjectHandler(req, res, next) {
   try {
     const actorId = String(req.user?.id ?? '')
-    const actorWorkspaceId = String(req.user?.workspaceId ?? '')
-    if (!actorId || !actorWorkspaceId || actorId !== actorWorkspaceId) {
-      return res.status(403).json({ message: 'Only workspace owner can delete projects.' })
+    if (!actorId) {
+      return res.status(401).json({ message: 'Unauthorized' })
     }
     const { projectId } = req.params
     if (!projectId) {
@@ -59,8 +78,11 @@ export async function deleteProjectHandler(req, res, next) {
     }
 
     const existing = await getProjectById(projectId)
-    if (!existing || String(existing.workspaceId) !== actorWorkspaceId) {
+    if (!existing || !workspaceIdsForUser(req).includes(String(existing.workspaceId))) {
       return res.status(404).json({ message: 'Project not found.' })
+    }
+    if (!userOwnsWorkspaceRoot(req, existing.workspaceId)) {
+      return res.status(403).json({ message: 'Only the workspace owner can delete projects.' })
     }
 
     const result = await deleteProjectIfAllowed(projectId)
@@ -76,9 +98,8 @@ export async function deleteProjectHandler(req, res, next) {
 export async function updateProjectHandler(req, res, next) {
   try {
     const actorId = String(req.user?.id ?? '')
-    const actorWorkspaceId = String(req.user?.workspaceId ?? '')
-    if (!actorId || !actorWorkspaceId || actorId !== actorWorkspaceId) {
-      return res.status(403).json({ message: 'Only workspace owner can update projects.' })
+    if (!actorId) {
+      return res.status(401).json({ message: 'Unauthorized' })
     }
     const { projectId } = req.params
     if (!projectId) {
@@ -86,8 +107,11 @@ export async function updateProjectHandler(req, res, next) {
     }
 
     const existing = await getProjectById(projectId)
-    if (!existing || String(existing.workspaceId) !== actorWorkspaceId) {
+    if (!existing || !workspaceIdsForUser(req).includes(String(existing.workspaceId))) {
       return res.status(404).json({ message: 'Project not found.' })
+    }
+    if (!userOwnsWorkspaceRoot(req, existing.workspaceId)) {
+      return res.status(403).json({ message: 'Only the workspace owner can update projects.' })
     }
 
     const name =
@@ -95,6 +119,8 @@ export async function updateProjectHandler(req, res, next) {
     const description =
       req.body?.description !== undefined ? String(req.body.description).trim() : undefined
     const status = req.body?.status !== undefined ? String(req.body.status).trim() : undefined
+    const newWorkspaceRaw =
+      req.body?.workspaceId !== undefined ? String(req.body.workspaceId).trim() : undefined
     if (name !== undefined && !name) {
       return res.status(400).json({ message: 'Project name cannot be empty.' })
     }
@@ -102,11 +128,25 @@ export async function updateProjectHandler(req, res, next) {
       return res.status(400).json({ message: 'Project status is invalid.' })
     }
 
-    const project = await updateProject(projectId, {
-      name,
-      description,
-      status,
-    })
+    const payload = { name, description, status }
+    if (newWorkspaceRaw !== undefined) {
+      const allowed = workspaceIdsForUser(req)
+      if (!allowed.includes(newWorkspaceRaw)) {
+        return res.status(400).json({ message: 'Pick a workspace you belong to.' })
+      }
+      if (newWorkspaceRaw !== String(existing.workspaceId)) {
+        const taskCount = await TaskModel.countDocuments({ projectId })
+        if (taskCount > 0) {
+          return res.status(409).json({
+            message:
+              'Cannot move a project to another workspace while it still has tasks. Remove or move tasks first.',
+          })
+        }
+      }
+      payload.workspaceId = newWorkspaceRaw
+    }
+
+    const project = await updateProject(projectId, payload)
     if (!project) {
       return res.status(404).json({ message: 'Project not found.' })
     }

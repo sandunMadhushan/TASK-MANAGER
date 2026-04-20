@@ -34,10 +34,19 @@ type TaskStore = {
   fetchUsers: (options?: { silent?: boolean }) => Promise<void>
   fetchProjects: () => Promise<void>
   setActiveProjectId: (projectId: string | null) => void
-  addProject: (input: { name: string; description?: string }) => Promise<boolean>
+  addProject: (input: {
+    name: string
+    description?: string
+    workspaceId?: string
+  }) => Promise<boolean>
   editProject: (
     id: string,
-    input: { name?: string; description?: string; status?: 'active' | 'archived' }
+    input: {
+      name?: string
+      description?: string
+      status?: 'active' | 'archived'
+      workspaceId?: string
+    }
   ) => Promise<boolean>
   deleteProject: (
     id: string

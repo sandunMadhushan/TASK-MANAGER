@@ -321,6 +321,8 @@ export async function fetchProjectsApi(): Promise<Project[]> {
 export async function createProjectApi(input: {
   name: string
   description?: string
+  /** Workspace (team) this project belongs to; defaults to your primary workspace. */
+  workspaceId?: string
 }): Promise<Project> {
   return request<Project>('/projects', {
     method: 'POST',
@@ -330,7 +332,12 @@ export async function createProjectApi(input: {
 
 export async function updateProjectApi(
   projectId: string,
-  input: { name?: string; description?: string; status?: 'active' | 'archived' }
+  input: {
+    name?: string
+    description?: string
+    status?: 'active' | 'archived'
+    workspaceId?: string
+  }
 ): Promise<Project> {
   return request<Project>(`/projects/${projectId}`, {
     method: 'PATCH',

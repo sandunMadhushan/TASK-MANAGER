@@ -11,6 +11,7 @@ import { NotificationsPage } from "@/pages/NotificationsPage";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { ProjectsPage } from "@/pages/ProjectsPage";
 import { TasksPage } from "@/pages/TasksPage";
 import { TeamPage } from "@/pages/TeamPage";
 import { useAuthStore } from "@/store/auth-store";
@@ -70,6 +71,7 @@ function App() {
       "/": "Home",
       "/dashboard": "Dashboard",
       "/tasks": "Tasks",
+      "/projects": "Projects",
       "/team": "Team",
       "/notifications": "Notifications",
       "/profile": "Profile",
@@ -140,6 +142,18 @@ function App() {
             ) : (
               <DashboardLayout>
                 <TasksPage />
+              </DashboardLayout>
+            )
+          }
+        />
+        <Route
+          path="/projects"
+          element={
+            !currentUser ? (
+              <Navigate to="/" replace />
+            ) : (
+              <DashboardLayout>
+                <ProjectsPage />
               </DashboardLayout>
             )
           }

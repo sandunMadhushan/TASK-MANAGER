@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import {
   Bell,
   CheckSquare,
+  FolderKanban,
   LayoutDashboard,
   Settings2,
   UserCircle2,
@@ -20,6 +21,7 @@ import { useTaskStore } from '@/store/task-store'
 const nav = [
   { icon: LayoutDashboard, label: 'Dashboard', to: '/dashboard' },
   { icon: CheckSquare, label: 'Tasks', to: '/tasks' },
+  { icon: FolderKanban, label: 'Projects', to: '/projects' },
   { icon: Users, label: 'Team', to: '/team' },
   { icon: Bell, label: 'Notifications', to: '/notifications' },
   { icon: Settings2, label: 'Settings', to: '/settings' },
@@ -117,6 +119,18 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
               <CheckSquare className="size-3.5" />
               New task
             </NavLink>
+            {isWorkspaceOwner ? (
+              <NavLink
+                to="/projects"
+                onClick={onNavigate}
+                className={cn(
+                  'inline-flex w-full items-center gap-2 rounded-lg border border-white/10 bg-white/6 px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-white/10'
+                )}
+              >
+                <FolderKanban className="size-3.5" />
+                New project
+              </NavLink>
+            ) : null}
             {isWorkspaceOwner ? (
               <NavLink
                 to="/team"
