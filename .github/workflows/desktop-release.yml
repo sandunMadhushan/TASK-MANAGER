@@ -16,6 +16,10 @@ jobs:
     env:
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      VITE_API_URL: ${{ secrets.VITE_API_URL }}
+      VITE_NOVU_APPLICATION_IDENTIFIER: ${{ secrets.VITE_NOVU_APPLICATION_IDENTIFIER }}
+      VITE_NOVU_BACKEND_URL: ${{ secrets.VITE_NOVU_BACKEND_URL }}
+      VITE_NOVU_SOCKET_URL: ${{ secrets.VITE_NOVU_SOCKET_URL }}
 
     steps:
       - name: Checkout
@@ -33,6 +37,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate required frontend env for production build
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:VITE_API_URL)) {
+            throw "Missing secret VITE_API_URL. Add it in GitHub repo secrets before running release workflow."
+          }
+
       - name: Generate app icons
         run: npm run icons:generate
 
@@ -42,6 +53,8 @@ jobs:
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
+          name: Nexus Tasks ${{ github.ref_name }}
           files: |
             src-tauri/target/release/latest.json
             src-tauri/target/release/**/latest.json
