@@ -6,7 +6,7 @@ import {
   updateTask,
   updateTaskStatus,
 } from '../services/task-service.js'
-import { getUsersByIds } from '../services/user-service.js'
+import { getUserById, getUsersByIds } from '../services/user-service.js'
 import {
   notifyTaskAssigned,
   notifyTaskCompleted,
@@ -92,7 +92,14 @@ export async function updateTaskStatusHandler(req, res, next) {
     }
 
     if (previousTask && previousTask.status !== 'done' && task.status === 'done') {
-      await runNotificationSafely(() => notifyTaskCompleted(task, getAssignedUsers(task)))
+      const recipients = await getTaskCompletedRecipients(task, currentUserId)
+      const completedBy = await getUserById(currentUserId)
+      await runNotificationSafely(() =>
+        notifyTaskCompleted(task, recipients, {
+          completedByName: completedBy?.name ?? '',
+          completedByEmail: completedBy?.email ?? '',
+        })
+      )
     }
 
     return res.status(200).json(task)
@@ -154,7 +161,14 @@ export async function updateTaskHandler(req, res, next) {
       }
 
       if (previousTask.status !== 'done' && task.status === 'done') {
-        await runNotificationSafely(() => notifyTaskCompleted(task, getAssignedUsers(task)))
+        const recipients = await getTaskCompletedRecipients(task, currentUserId)
+        const completedBy = await getUserById(currentUserId)
+        await runNotificationSafely(() =>
+          notifyTaskCompleted(task, recipients, {
+            completedByName: completedBy?.name ?? '',
+            completedByEmail: completedBy?.email ?? '',
+          })
+        )
       }
     }
 
@@ -180,6 +194,29 @@ function getAssignedUsers(task) {
   return task.assignedTo.filter(
     (user) => user && typeof user === 'object' && user.id && user.email
   )
+}
+
+async function getTaskCompletedRecipients(task, actorUserId) {
+  const actorId = String(actorUserId ?? '')
+  const recipients = new Map()
+
+  for (const user of getAssignedUsers(task)) {
+    if (String(user.id) === actorId) continue
+    recipients.set(String(user.id), user)
+  }
+
+  const createdById =
+    task?.createdBy && typeof task.createdBy === 'object'
+      ? task.createdBy.id
+      : task?.createdBy
+  if (createdById) {
+    const creator = await getUserById(createdById)
+    if (creator?.id && creator?.email && String(creator.id) !== actorId) {
+      recipients.set(String(creator.id), creator)
+    }
+  }
+
+  return Array.from(recipients.values())
 }
 
 async function runNotificationSafely(notify) {
