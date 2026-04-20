@@ -1,4 +1,4 @@
-import { isTauri } from '@tauri-apps/api/core'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 import { check } from '@tauri-apps/plugin-updater'
 import { toast } from 'sonner'
 
@@ -9,13 +9,23 @@ type CheckOptions = {
 let isCheckingForUpdate = false
 let isInstallingUpdate = false
 
+async function resolveUpdaterTarget(): Promise<string | undefined> {
+  if (!isTauri()) return undefined
+  try {
+    return await invoke<string>('detect_windows_installer_target')
+  } catch {
+    return undefined
+  }
+}
+
 export async function checkForDesktopUpdate(options: CheckOptions = {}): Promise<void> {
   if (!isTauri()) return
   if (isCheckingForUpdate) return
   isCheckingForUpdate = true
 
   try {
-    const update = await check()
+    const target = await resolveUpdaterTarget()
+    const update = await check(target ? { target } : undefined)
     if (!update) {
       if (!options.silentIfUpToDate) {
         toast.success('You are up to date')

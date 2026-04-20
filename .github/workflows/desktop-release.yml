@@ -58,35 +58,54 @@ jobs:
           $releaseDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
           $repo = "${{ github.repository }}"
 
-          $msi = Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse -Filter "*.msi" | Select-Object -First 1
-          $exe = Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse -Filter "*.exe" | Select-Object -First 1
+          $bundleRoot = "src-tauri/target/release/bundle"
+          $msi = Get-ChildItem -Path $bundleRoot -Recurse -Filter "*.msi" | Select-Object -First 1
+          $exe = Get-ChildItem -Path $bundleRoot -Recurse -Filter "*.exe" | Select-Object -First 1
+
+          if (!$msi -and !$exe) {
+            throw "No MSI or EXE artifact found for updater manifest generation."
+          }
+
+          $platforms = [ordered]@{}
 
           if ($msi) {
-            $artifact = $msi
+            $msiSigPath = "$($msi.FullName).sig"
+            if (!(Test-Path $msiSigPath)) {
+              throw "Missing MSI signature file: $msiSigPath"
+            }
+            $msiSignature = (Get-Content -Path $msiSigPath -Raw).Trim()
+            $msiUrl = "https://github.com/$repo/releases/download/$tag/$($msi.Name)"
+            $platforms["windows-x86_64-msi"] = [ordered]@{
+              signature = $msiSignature
+              url = $msiUrl
+            }
+          }
+
+          if ($exe) {
+            $exeSigPath = "$($exe.FullName).sig"
+            if (!(Test-Path $exeSigPath)) {
+              throw "Missing EXE signature file: $exeSigPath"
+            }
+            $exeSignature = (Get-Content -Path $exeSigPath -Raw).Trim()
+            $exeUrl = "https://github.com/$repo/releases/download/$tag/$($exe.Name)"
+            $platforms["windows-x86_64-exe"] = [ordered]@{
+              signature = $exeSignature
+              url = $exeUrl
+            }
+          }
+
+          # Backward compatibility for older app versions that don't pass explicit target.
+          if ($msi) {
+            $platforms["windows-x86_64"] = $platforms["windows-x86_64-msi"]
           } elseif ($exe) {
-            $artifact = $exe
-          } else {
-            throw "No Windows installer artifact (.exe or .msi) found."
+            $platforms["windows-x86_64"] = $platforms["windows-x86_64-exe"]
           }
-
-          $sigPath = "$($artifact.FullName).sig"
-          if (!(Test-Path $sigPath)) {
-            throw "Missing signature file: $sigPath"
-          }
-          $signature = (Get-Content -Path $sigPath -Raw).Trim()
-
-          $downloadUrl = "https://github.com/$repo/releases/download/$tag/$($artifact.Name)"
 
           $manifest = [ordered]@{
             version = $version
             notes = "Release $tag"
             pub_date = $releaseDate
-            platforms = [ordered]@{
-              "windows-x86_64" = [ordered]@{
-                signature = $signature
-                url = $downloadUrl
-              }
-            }
+            platforms = $platforms
           }
 
           $json = $manifest | ConvertTo-Json -Depth 10

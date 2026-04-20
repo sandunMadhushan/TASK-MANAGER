@@ -137,6 +137,7 @@ This project is wired to use the Tauri updater with GitHub Releases:
 - App also performs a silent startup check in desktop builds
 - If an update exists, the app shows a themed toast with **Install now** / **Later** actions (no browser confirm popup)
 - CI workflow (`.github/workflows/desktop-release.yml`) builds signed desktop artifacts on `v*` tags and publishes release assets automatically
+- **Updater package policy (Windows):** release metadata now publishes separate updater targets for both **MSI** and **EXE** installs, so each installed type can receive auto-updates through its matching package.
 
 Before shipping updater-enabled releases, you must configure signing:
 
