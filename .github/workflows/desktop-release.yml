@@ -58,13 +58,13 @@ jobs:
           $releaseDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
           $repo = "${{ github.repository }}"
 
-          $exe = Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse -Filter "*.exe" | Select-Object -First 1
           $msi = Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse -Filter "*.msi" | Select-Object -First 1
+          $exe = Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse -Filter "*.exe" | Select-Object -First 1
 
-          if ($exe) {
-            $artifact = $exe
-          } elseif ($msi) {
+          if ($msi) {
             $artifact = $msi
+          } elseif ($exe) {
+            $artifact = $exe
           } else {
             throw "No Windows installer artifact (.exe or .msi) found."
           }

@@ -46,38 +46,58 @@ export const useTaskStore = create<TaskStore>((set) => ({
   deletingTaskId: null,
   error: null,
   fetchTasks: async (options) => {
-    set({ isLoading: true, error: null })
+    if (!options?.silent) {
+      set({ isLoading: true, error: null })
+    }
     try {
       const tasks = await fetchTasksApi()
-      set({ tasks, isLoading: false, error: null })
+      if (options?.silent) {
+        set({ tasks, error: null })
+      } else {
+        set({ tasks, isLoading: false, error: null })
+      }
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : 'Unable to load tasks. Please try again.'
-      set({
-        isLoading: false,
-        error: message,
-      })
+      if (options?.silent) {
+        set({ error: message })
+      } else {
+        set({
+          isLoading: false,
+          error: message,
+        })
+      }
       if (!options?.silent) {
         toast.error('Failed to load tasks', { description: message })
       }
     }
   },
   fetchUsers: async (options) => {
-    set({ isUsersLoading: true, error: null })
+    if (!options?.silent) {
+      set({ isUsersLoading: true, error: null })
+    }
     try {
       const users = await fetchUsersApi()
-      set({ users, isUsersLoading: false, error: null })
+      if (options?.silent) {
+        set({ users, error: null })
+      } else {
+        set({ users, isUsersLoading: false, error: null })
+      }
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : 'Unable to load users. Please try again.'
-      set({
-        isUsersLoading: false,
-        error: message,
-      })
+      if (options?.silent) {
+        set({ error: message })
+      } else {
+        set({
+          isUsersLoading: false,
+          error: message,
+        })
+      }
       if (!options?.silent) {
         toast.error('Failed to load team', { description: message })
       }

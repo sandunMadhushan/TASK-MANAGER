@@ -1,0 +1,11 @@
+{
+  "version": "0.1.1",
+  "notes": "Release v0.1.1",
+  "pub_date": "2026-04-20T12:04:33Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSSTdrUC9rZWREcm9CVmxJQmNhY0VqZENUL2FUYXRFSXUxQkw1QnlXUmVxZms0MFZkSFF3UW5WT05vZ3FTODY3RlcvU212Z1FsWjlpRnE1V3pEK2pCRDVWZTIyeGpkZUE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc2Njc3OTg2CWZpbGU6TmV4dXMgVGFza3NfMC4xLjFfeDY0X2VuLVVTLm1zaQpkN3YwZEhnRmY2MFh5MDFWT21UTHY0Q2NFU0hZUlBCczhHd3ZYdGpzVVNYQXlXODkxM3pteDlBa05GbFRraE8yZW5ncVlDcCsyWHNiMGZXcC9icFFDdz09Cg==",
+      "url": "https://github.com/sandunMadhushan/TASK-MANAGER/releases/download/v0.1.1/Nexus.Tasks_0.1.1_x64_en-US.msi"
+    }
+  }
+}
