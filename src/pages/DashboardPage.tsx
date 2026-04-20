@@ -43,19 +43,42 @@ export function DashboardPage() {
       queueMicrotask(() => setOverviewTasks(undefined));
       return;
     }
+
     let cancelled = false;
-    queueMicrotask(() => {
-      if (!cancelled) setOverviewTasks(undefined);
-    });
-    void fetchTasksApi({ projectScope: "all" })
-      .then((rows) => {
+
+    async function loadOverview(options?: { withLoading?: boolean }) {
+      if (options?.withLoading) {
+        queueMicrotask(() => {
+          if (!cancelled) setOverviewTasks(undefined);
+        });
+      }
+      try {
+        const rows = await fetchTasksApi({ projectScope: "all" });
         if (!cancelled) setOverviewTasks(rows);
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setOverviewTasks([]);
-      });
+      }
+    }
+
+    void loadOverview({ withLoading: true });
+
+    const interval = window.setInterval(() => {
+      void loadOverview();
+    }, 10_000);
+
+    const sync = () => {
+      if (document.visibilityState !== "visible") return;
+      void loadOverview();
+    };
+
+    window.addEventListener("focus", sync);
+    document.addEventListener("visibilitychange", sync);
+
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", sync);
+      document.removeEventListener("visibilitychange", sync);
     };
   }, [currentUser]);
 
@@ -149,7 +172,7 @@ export function DashboardPage() {
         </div>
       </motion.div>
 
-      <ProjectOverviewSection tasks={overviewTasks} projects={projects} />
+      <ProjectOverviewSection tasks={overviewTasks} projects={projects} anchorDate={now} />
 
       <section aria-labelledby="tasks-heading" className="space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

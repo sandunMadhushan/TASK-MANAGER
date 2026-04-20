@@ -22,8 +22,8 @@ function addDays(base: Date, days: number): Date {
   return x;
 }
 
-function MiniDueTimeline({ tasks }: { tasks: Task[] }) {
-  const windowStart = useMemo(() => startOfLocalDay(new Date()), []);
+function MiniDueTimeline({ tasks, anchorDate }: { tasks: Task[]; anchorDate: Date }) {
+  const windowStart = useMemo(() => startOfLocalDay(anchorDate), [anchorDate]);
   const windowEnd = useMemo(
     () => addDays(windowStart, HORIZON_DAYS),
     [windowStart],
@@ -52,12 +52,12 @@ function MiniDueTimeline({ tasks }: { tasks: Task[] }) {
   }, [tasks, totalMs, windowEnd, windowStart]);
 
   const todayPct = useMemo(() => {
-    const now = startOfLocalDay(new Date());
+    const day = startOfLocalDay(anchorDate);
     return Math.min(
       100,
-      Math.max(0, ((now.getTime() - windowStart.getTime()) / totalMs) * 100),
+      Math.max(0, ((day.getTime() - windowStart.getTime()) / totalMs) * 100),
     );
-  }, [totalMs, windowStart]);
+  }, [anchorDate, totalMs, windowStart]);
 
   if (markers.length === 0) {
     return (
@@ -112,39 +112,55 @@ function StatusStrip({
     );
   }
   const total = todo + inProgress + done;
-  const wTodo = (todo / total) * 100;
-  const wIp = (inProgress / total) * 100;
-  const wDone = (done / total) * 100;
   const doneRatio = Math.round((done / total) * 100);
+  const open = todo + inProgress;
+  const wDoneComplete = (done / total) * 100;
+  const wTodoAmongOpen = open > 0 ? (todo / open) * 100 : 0;
+  const wIpAmongOpen = open > 0 ? (inProgress / open) * 100 : 0;
 
   return (
-    <div className="space-y-1">
-      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-white/10">
-        {wTodo > 0 ? (
+    <div className="space-y-2.5">
+      <div className="space-y-1">
+        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Completed
+        </p>
+        <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-white/10">
           <div
-            className="h-full bg-slate-400/80"
-            style={{ width: `${wTodo}%` }}
-            title={`To do: ${todo}`}
+            className="h-full rounded-full bg-emerald-500/90 transition-[width] duration-300"
+            style={{ width: `${wDoneComplete}%` }}
+            title={`${done} of ${total} tasks done`}
           />
-        ) : null}
-        {wIp > 0 ? (
-          <div
-            className="h-full bg-violet-500/85"
-            style={{ width: `${wIp}%` }}
-            title={`In progress: ${inProgress}`}
-          />
-        ) : null}
-        {wDone > 0 ? (
-          <div
-            className="h-full bg-emerald-500/80"
-            style={{ width: `${wDone}%` }}
-            title={`Done: ${done}`}
-          />
-        ) : null}
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          {doneRatio}% of tasks done ({done}/{total})
+        </p>
       </div>
-      <p className="text-[11px] text-muted-foreground">
-        {doneRatio}% done · {todo} to do · {inProgress} in progress
-      </p>
+      {open > 0 ? (
+        <div className="space-y-1">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            Open work mix
+          </p>
+          <div className="flex h-2 w-full overflow-hidden rounded-full bg-white/10">
+            {wTodoAmongOpen > 0 ? (
+              <div
+                className="h-full bg-slate-400/85 transition-[width] duration-300"
+                style={{ width: `${wTodoAmongOpen}%` }}
+                title={`To do: ${todo}`}
+              />
+            ) : null}
+            {wIpAmongOpen > 0 ? (
+              <div
+                className="h-full bg-violet-500/85 transition-[width] duration-300"
+                style={{ width: `${wIpAmongOpen}%` }}
+                title={`In progress: ${inProgress}`}
+              />
+            ) : null}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            {todo} to do · {inProgress} in progress
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -152,9 +168,11 @@ function StatusStrip({
 type Props = {
   tasks: Task[] | undefined;
   projects: Project[];
+  /** Advances “today” on the due strip and window; should tick over time (e.g. dashboard clock). */
+  anchorDate: Date;
 };
 
-export function ProjectOverviewSection({ tasks, projects }: Props) {
+export function ProjectOverviewSection({ tasks, projects, anchorDate }: Props) {
   const activeProjects = useMemo(
     () =>
       [...projects]
@@ -249,7 +267,7 @@ export function ProjectOverviewSection({ tasks, projects }: Props) {
                   </Badge>
                 </div>
                 <StatusStrip todo={todo} inProgress={inProgress} done={done} />
-                <MiniDueTimeline tasks={list} />
+                <MiniDueTimeline tasks={list} anchorDate={anchorDate} />
               </motion.article>
             );
           })}
