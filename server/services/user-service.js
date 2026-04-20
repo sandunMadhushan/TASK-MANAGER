@@ -67,6 +67,32 @@ function normalizeUserMembership(user) {
   }
 }
 
+async function workspaceOwnerLabelsById(workspaceIdList) {
+  const roots = [...new Set((workspaceIdList ?? []).map(String).filter(Boolean))]
+  if (roots.length === 0) return new Map()
+  const owners = await UserModel.find({ _id: { $in: roots } })
+  return new Map(
+    owners.map((o) => {
+      const raw = o.workspaceName || o.name || o.email || 'Workspace'
+      const label = String(raw).trim() || 'Workspace'
+      return [String(o._id), label]
+    })
+  )
+}
+
+/** Adds workspaceNames (owner / workspace display labels) for session and roster payloads. */
+export async function attachWorkspaceNamesToUser(user) {
+  const base = user && typeof user.toJSON === 'function' ? user.toJSON() : user
+  const normalized = normalizeUserMembership(base)
+  const ownerById = await workspaceOwnerLabelsById(normalized.workspaceIds ?? [])
+  return {
+    ...normalized,
+    workspaceNames: (normalized.workspaceIds ?? []).map(
+      (id) => ownerById.get(String(id)) ?? 'Workspace'
+    ),
+  }
+}
+
 export async function getUsers(workspaceId) {
   const workspaceIds = Array.isArray(workspaceId)
     ? workspaceId.map((id) => normalizeWorkspaceId(id)).filter(Boolean)
@@ -87,18 +113,12 @@ export async function getUsers(workspaceId) {
   const workspaceRoots = new Set(
     normalizedUsers.flatMap((u) => u.workspaceIds ?? [])
   )
-  const owners = await UserModel.find({ _id: { $in: Array.from(workspaceRoots) } })
-  const ownerById = new Map(
-    owners.map((o) => [
-      String(o._id),
-      o.workspaceName || o.name || o.email || String(o._id),
-    ])
-  )
+  const ownerById = await workspaceOwnerLabelsById([...workspaceRoots])
 
   return normalizedUsers.map((user) => ({
     ...user,
     workspaceNames: (user.workspaceIds ?? []).map(
-      (id) => ownerById.get(String(id)) ?? String(id)
+      (id) => ownerById.get(String(id)) ?? 'Workspace'
     ),
   }))
 }
@@ -146,7 +166,7 @@ export async function ensureUserWorkspace(userId) {
   // Keep own workspace as primary/default so joining a new team never "moves" the account.
   user.workspaceId = selfWorkspaceId
   await user.save()
-  return normalizeUserMembership(user.toJSON())
+  return attachWorkspaceNamesToUser(user)
 }
 
 export async function getUsersByIds(userIds, workspaceId) {
@@ -182,7 +202,7 @@ export async function createUser(payload) {
       { new: true }
     )
   }
-  return normalizeUserMembership(user.toJSON())
+  return attachWorkspaceNamesToUser(user)
 }
 
 /**
@@ -242,7 +262,12 @@ export async function inviteUserToWorkspace(payload, workspaceId, actorUserId) {
   existing.workspaceIds = normalizeWorkspaceIds(existingWorkspaceIds, ws, existing._id.toString())
   await existing.save()
 
-  return { ok: true, statusCode: 200, user: normalizeUserMembership(existing.toJSON()), outcome: 'joined' }
+  return {
+    ok: true,
+    statusCode: 200,
+    user: await attachWorkspaceNamesToUser(existing),
+    outcome: 'joined',
+  }
 }
 
 export async function updateUser(userId, payload, workspaceId) {

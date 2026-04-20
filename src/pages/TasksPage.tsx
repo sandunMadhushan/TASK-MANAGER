@@ -69,16 +69,28 @@ export function TasksPage() {
     const names = currentUser?.workspaceNames ?? []
     const map = new Map<string, string>()
     ids.forEach((id, index) => {
-      map.set(String(id), names[index] || String(id))
+      const raw = names[index]
+      if (raw !== undefined && raw !== null && String(raw).trim() !== '') {
+        map.set(String(id), String(raw).trim())
+      }
     })
     return map
   }, [currentUser?.workspaceIds, currentUser?.workspaceNames])
+  const rosterNameByUserId = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const u of users) {
+      if (u.id && u.name) map.set(String(u.id), u.name)
+    }
+    return map
+  }, [users])
   const groupedProjects = useMemo(() => {
     const map = new Map<string, { label: string; items: typeof projects }>()
     for (const project of projects) {
       const key = String(project.workspaceId)
+      const label =
+        workspaceNameById.get(key) ?? rosterNameByUserId.get(key) ?? 'Workspace'
       const bucket = map.get(key) ?? {
-        label: workspaceNameById.get(key) ?? key,
+        label,
         items: [],
       }
       bucket.items.push(project)
@@ -91,7 +103,7 @@ export function TasksPage() {
         items: [...entry.items].sort((a, b) => a.name.localeCompare(b.name)),
       }))
       .sort((a, b) => a.label.localeCompare(b.label))
-  }, [projects, workspaceNameById])
+  }, [projects, workspaceNameById, rosterNameByUserId])
   const groupedProjectsForFilter = useMemo(() => {
     return groupedProjects
       .map((group) => ({
