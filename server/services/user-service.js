@@ -49,7 +49,12 @@ function normalizeWorkspaceIds(rawWorkspaceIds, fallbackWorkspaceId, userId) {
 
 function normalizeUserMembership(user) {
   if (!user) return user
-  const userObj = user.id ? user : user.toJSON()
+  // Mongoose documents also expose `id`, but spreading them can drop actual fields like
+  // name/email. Always normalize to a plain object when possible.
+  const userObj =
+    typeof user.toJSON === 'function'
+      ? user.toJSON()
+      : user
   const workspaceIds = normalizeWorkspaceIds(
     userObj.workspaceIds,
     userObj.workspaceId,
