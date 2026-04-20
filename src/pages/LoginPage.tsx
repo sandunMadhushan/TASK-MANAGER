@@ -280,9 +280,6 @@ export function LoginPage() {
                   </Button>
                 </div>
               ) : null}
-              <p className="text-xs text-muted-foreground">
-                Demo emails: alex@company.com, sophie@company.com
-              </p>
             </form>
           </CardContent>
         </Card>
