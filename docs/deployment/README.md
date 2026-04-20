@@ -32,4 +32,4 @@ You can swap **AWS EC2 ↔ Render ↔ Railway ↔ Fly.io** or **Vercel ↔ Netli
 
 - **Local:** still `npm run server:dev` + `npm run dev` with your existing `.env`.
 - **Production:** separate URLs; configure CORS and `VITE_*` only on the hosts, not in your laptop `.env`.
-- **Desktop releases:** use [`10-desktop-release-github-updater.md`](./10-desktop-release-github-updater.md) for version bump + signed GitHub updater artifacts (`latest.json`, installer, `.sig`).
+- **Desktop releases:** use [`10-desktop-release-github-updater.md`](./10-desktop-release-github-updater.md) for version bump + tag-driven GitHub Actions publishing of signed updater artifacts (`latest.json`, installer, `.sig`).

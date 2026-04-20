@@ -144,8 +144,8 @@ Before shipping updater-enabled releases, you must configure signing:
 1. Generate a Tauri updater key pair (once).
 2. Put the **private key** and password in CI/local build secrets.
 3. Replace `src-tauri/tauri.conf.json` updater `pubkey` with your public key.
-4. Build with `npm run tauri:build` (this repo sets `"createUpdaterArtifacts": true`).
-5. Publish the generated updater artifacts/signatures in the GitHub Release for each new tag.
+4. Push a release tag (`v*`) so GitHub Actions runs `.github/workflows/desktop-release.yml`.
+5. Let CI build signed updater artifacts and attach them to the GitHub Release.
 
 Without a valid updater key pair + published updater artifacts, update checks will fail at runtime.
 
@@ -163,7 +163,7 @@ Optional: create an annotated tag in the same step:
 npm run release:version -- 0.1.2 --tag
 ```
 
-For the full release checklist (tag -> GitHub Actions build -> release assets -> updater test), see:
+For the full release checklist (version bump -> tag push -> GitHub Actions build -> updater test), see:
 
 - [`docs/deployment/10-desktop-release-github-updater.md`](./docs/deployment/10-desktop-release-github-updater.md)
 
@@ -314,7 +314,7 @@ pm2 restart <your-api-process>
 
 - **EC2:** `MONGODB_URI`, **`CLIENT_ORIGIN`** (all SPA origins that call the API, comma-separated), `AUTH_*`, `NOVU_*`; restart PM2 after edits
 - **SPA host (Vercel / static):** `VITE_API_URL`, `VITE_NOVU_*`; redeploy after any `VITE_*` change
-- **Tauri release:** `.env.production` with production `VITE_*`; `npm run tauri:build`; attach binaries to your GitHub Release if you ship installers
+- **Tauri release (recommended):** push `v*` tag and let GitHub Actions build and attach updater assets/signatures automatically
 - `vercel.json` SPA rewrite active where applicable (prevents refresh 404 on routes)
 - Novu workflows created and published with identifiers matching **`NOVU_WORKFLOW_*`** (underscore names on server)
 
@@ -327,6 +327,18 @@ pm2 restart <your-api-process>
 - Keep **`CLIENT_ORIGIN`** in sync with every frontend origin (custom domain + Vercel preview/production if both are used)
 - Consider rate-limiting auth endpoints before public launch
 
+## Contributing
+
+Contributions are welcome.
+
+If you want to contribute, please use the fork workflow:
+
+1. Fork this repository on GitHub.
+2. Clone your fork locally and create a feature branch.
+3. Make your changes and test locally.
+4. Commit and push your branch to your fork.
+5. Open a Pull Request from your fork to this repository.
+
 ## License
 
-Private project. All rights reserved.
+This project is licensed under the **Apache License 2.0**. See `LICENSE` for details.
