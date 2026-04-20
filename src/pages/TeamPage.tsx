@@ -46,6 +46,9 @@ export function TeamPage() {
   const [pendingInvites, setPendingInvites] = useState<TeamInviteItem[]>([])
   const [cancellingInviteId, setCancellingInviteId] = useState<string | null>(null)
   const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null)
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false)
+  const [renameGroupTarget, setRenameGroupTarget] = useState<{ id: string; name: string } | null>(null)
+  const [renameGroupName, setRenameGroupName] = useState('')
 
   function safeText(value: unknown, fallback: string): string {
     return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback
@@ -224,15 +227,33 @@ export function TeamPage() {
     }
   }
 
-  async function handleRenameGroup(groupId: string, currentName: string) {
+  function openRenameGroupDialog(groupId: string, currentName: string) {
     if (!currentUser?.id || currentUser.id !== groupId) return
-    const nextName = window.prompt('Enter new group name', currentName)?.trim()
-    if (!nextName || nextName === currentName) return
-    setRenamingGroupId(groupId)
+    setRenameGroupTarget({ id: groupId, name: currentName })
+    setRenameGroupName(currentName)
+    setRenameDialogOpen(true)
+  }
+
+  async function handleRenameGroupSubmit(event: FormEvent) {
+    event.preventDefault()
+    if (!renameGroupTarget) return
+    const nextName = renameGroupName.trim()
+    if (!nextName) {
+      toast.error('Group name is required')
+      return
+    }
+    if (nextName === renameGroupTarget.name) {
+      setRenameDialogOpen(false)
+      return
+    }
+    setRenamingGroupId(renameGroupTarget.id)
     try {
-      await updateWorkspaceNameApi(groupId, nextName)
+      await updateWorkspaceNameApi(renameGroupTarget.id, nextName)
       await Promise.all([fetchUsers(), useAuthStore.getState().bootstrap()])
       toast.success('Group name updated')
+      setRenameDialogOpen(false)
+      setRenameGroupTarget(null)
+      setRenameGroupName('')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to update group name.'
       toast.error('Failed to update group name', { description: message })
@@ -391,6 +412,45 @@ export function TeamPage() {
           </div>
         </DialogContent>
       </Dialog>
+      <Dialog
+        open={renameDialogOpen}
+        onOpenChange={(open) => {
+          setRenameDialogOpen(open)
+          if (!open) {
+            setRenameGroupTarget(null)
+            setRenameGroupName('')
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename group</DialogTitle>
+            <DialogDescription>
+              Update the display name of your team group.
+            </DialogDescription>
+          </DialogHeader>
+          <form className="space-y-3" onSubmit={handleRenameGroupSubmit}>
+            <Input
+              value={renameGroupName}
+              onChange={(event) => setRenameGroupName(event.target.value)}
+              placeholder="Group name"
+              aria-label="Group name"
+              maxLength={80}
+            />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setRenameDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={!renameGroupTarget || renamingGroupId === renameGroupTarget.id}
+              >
+                {renameGroupTarget && renamingGroupId === renameGroupTarget.id ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <motion.div
         animate={{ opacity: 1, y: 0 }}
@@ -440,7 +500,7 @@ export function TeamPage() {
                         variant="ghost"
                         className="size-6"
                         disabled={renamingGroupId === group.id}
-                        onClick={() => void handleRenameGroup(group.id, group.name)}
+                        onClick={() => openRenameGroupDialog(group.id, group.name)}
                         aria-label={`Edit group name ${group.name}`}
                         title="Edit group name"
                       >
