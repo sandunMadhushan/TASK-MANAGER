@@ -9,6 +9,22 @@ type CheckOptions = {
 let isCheckingForUpdate = false
 let isInstallingUpdate = false
 
+const WINDOWS_TARGET_MSI = 'windows-x86_64-msi'
+const WINDOWS_TARGET_EXE = 'windows-x86_64-exe'
+const WINDOWS_TARGET_FALLBACK = 'windows-x86_64'
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) return error.message
+  if (typeof error === 'string' && error.trim()) return error
+  try {
+    const asJson = JSON.stringify(error)
+    if (asJson && asJson !== '{}') return asJson
+  } catch {
+    // fall through
+  }
+  return 'Unknown updater error'
+}
+
 async function resolveUpdaterTarget(): Promise<string | undefined> {
   if (!isTauri()) return undefined
   try {
@@ -18,14 +34,32 @@ async function resolveUpdaterTarget(): Promise<string | undefined> {
   }
 }
 
+async function resolveUpdaterTargets(): Promise<string[]> {
+  const detected = await resolveUpdaterTarget()
+  const ordered = [detected, WINDOWS_TARGET_MSI, WINDOWS_TARGET_EXE, WINDOWS_TARGET_FALLBACK].filter(
+    (target): target is string => Boolean(target)
+  )
+  return [...new Set(ordered)]
+}
+
 export async function checkForDesktopUpdate(options: CheckOptions = {}): Promise<void> {
   if (!isTauri()) return
   if (isCheckingForUpdate) return
   isCheckingForUpdate = true
 
   try {
-    const target = await resolveUpdaterTarget()
-    const update = await check(target ? { target } : undefined)
+    const targets = await resolveUpdaterTargets()
+    let selectedTarget: string | undefined
+    let update = null as Awaited<ReturnType<typeof check>> | null
+    for (const target of targets) {
+      const candidate = await check({ target })
+      if (candidate) {
+        selectedTarget = target
+        update = candidate
+        break
+      }
+    }
+
     if (!update) {
       if (!options.silentIfUpToDate) {
         toast.success('You are up to date')
@@ -51,8 +85,24 @@ export async function checkForDesktopUpdate(options: CheckOptions = {}): Promise
               description: 'Restart Nexus Tasks to start using the new version.',
             })
           } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unknown updater error'
-            toast.error('Update installation failed', { description: message })
+            const retryTarget =
+              selectedTarget === WINDOWS_TARGET_MSI ? WINDOWS_TARGET_EXE : WINDOWS_TARGET_MSI
+            try {
+              const retryUpdate = await check({ target: retryTarget })
+              if (retryUpdate) {
+                toast.message('Retrying update...', {
+                  description: `Primary installer failed. Trying ${retryTarget} package.`,
+                })
+                await retryUpdate.downloadAndInstall()
+                toast.success('Update installed', {
+                  description: 'Restart Nexus Tasks to start using the new version.',
+                })
+                return
+              }
+            } catch {
+              // show original error below
+            }
+            toast.error('Update installation failed', { description: errorMessage(error) })
           } finally {
             isInstallingUpdate = false
           }
@@ -68,8 +118,7 @@ export async function checkForDesktopUpdate(options: CheckOptions = {}): Promise
       },
     })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown updater error'
-    toast.error('Update check failed', { description: message })
+    toast.error('Update check failed', { description: errorMessage(error) })
   } finally {
     isCheckingForUpdate = false
   }
