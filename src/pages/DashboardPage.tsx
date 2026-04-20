@@ -3,12 +3,15 @@ import { Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
+import { ProjectOverviewSection } from "@/components/dashboard/ProjectOverviewSection";
 import { CreateTaskModal } from "@/components/tasks/CreateTaskModal";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import { Button } from "@/components/ui/button";
 import { isDueWithinDays } from "@/lib/format-due-date";
+import { fetchTasksApi } from "@/services/task-api";
 import { useAuthStore } from "@/store/auth-store";
 import { useTaskStore } from "@/store/task-store";
+import type { Task } from "@/types/task";
 
 export function DashboardPage() {
   const [createOpen, setCreateOpen] = useState(false);
@@ -16,7 +19,9 @@ export function DashboardPage() {
   const [now, setNow] = useState(() => new Date());
   const [searchParams] = useSearchParams();
   const tasks = useTaskStore((s) => s.tasks);
+  const projects = useTaskStore((s) => s.projects);
   const currentUser = useAuthStore((s) => s.currentUser);
+  const [overviewTasks, setOverviewTasks] = useState<Task[] | undefined>(undefined);
   const searchText = (searchParams.get("q") ?? "").trim().toLowerCase();
   const firstName = (currentUser?.name ?? "there").split(" ")[0];
   const greeting = useMemo(() => {
@@ -33,18 +38,41 @@ export function DashboardPage() {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (!currentUser) {
+      queueMicrotask(() => setOverviewTasks(undefined));
+      return;
+    }
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setOverviewTasks(undefined);
+    });
+    void fetchTasksApi({ projectScope: "all" })
+      .then((rows) => {
+        if (!cancelled) setOverviewTasks(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setOverviewTasks([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser]);
+
   function openCreateModal() {
     setCreateSession((s) => s + 1);
     setCreateOpen(true);
   }
 
+  const statsTasks = overviewTasks ?? tasks;
+
   const { activeCount, dueSoonCount } = useMemo(() => {
-    const active = tasks.filter((t) => t.status !== "done").length;
-    const dueSoon = tasks.filter(
+    const active = statsTasks.filter((t) => t.status !== "done").length;
+    const dueSoon = statsTasks.filter(
       (t) => t.status !== "done" && isDueWithinDays(t.dueDate, 7),
     ).length;
     return { activeCount: active, dueSoonCount: dueSoon };
-  }, [tasks]);
+  }, [statsTasks]);
 
   const visibleTasks = useMemo(() => {
     if (!searchText) return tasks;
@@ -120,6 +148,8 @@ export function DashboardPage() {
           </motion.div>
         </div>
       </motion.div>
+
+      <ProjectOverviewSection tasks={overviewTasks} projects={projects} />
 
       <section aria-labelledby="tasks-heading" className="space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

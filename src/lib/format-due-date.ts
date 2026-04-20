@@ -29,7 +29,7 @@ export function isDueWithinDays(isoDate: string, days: number): boolean {
   return target >= now && target <= end
 }
 
-function parseLocalDate(isoDate: string): Date {
+export function parseLocalDate(isoDate: string): Date {
   const [y, m, d] = isoDate.split('-').map(Number)
   return new Date(y, m - 1, d)
 }

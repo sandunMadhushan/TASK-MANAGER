@@ -75,7 +75,10 @@ export async function getTasksHandler(req, res, next) {
   try {
     const currentUserId = req.user?.id
     const workspaceIds = req.user?.workspaceIds ?? [req.user?.workspaceId]
-    const projectIdQuery = typeof req.query?.projectId === 'string' ? req.query.projectId : ''
+    const projectScopeAll =
+      req.query?.projectScope === 'all' || req.query?.projectScope === 'true'
+    const projectIdQuery =
+      typeof req.query?.projectId === 'string' && !projectScopeAll ? req.query.projectId : ''
     if (!currentUserId) {
       return res.status(401).json({ message: 'Unauthorized' })
     }

@@ -162,9 +162,14 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-export async function fetchTasksApi(options?: { projectId?: string }): Promise<Task[]> {
+export async function fetchTasksApi(options?: {
+  projectId?: string
+  /** Load all accessible tasks (ignores `projectId` filter). Used for dashboard overviews. */
+  projectScope?: 'all'
+}): Promise<Task[]> {
   const search = new URLSearchParams()
-  if (options?.projectId) search.set('projectId', options.projectId)
+  if (options?.projectScope === 'all') search.set('projectScope', 'all')
+  else if (options?.projectId) search.set('projectId', options.projectId)
   const suffix = search.toString() ? `?${search.toString()}` : ''
   const data = await request<TaskDto[]>(`/tasks${suffix}`)
   return data.map(mapTaskDto)
