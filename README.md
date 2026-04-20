@@ -21,7 +21,7 @@
 - Team management (invite/edit/remove members from workspace — accounts are not deleted)
 - Real-time-ready Novu inbox bell and notifications page
 - Global search, filters, sorting, and polished dark glass UI
-- **Desktop:** Tauri v2 app sharing the same React UI (currently released for Windows; macOS/Linux can be added)
+- **Desktop:** Tauri v2 app sharing the same React UI (release workflow builds Windows, macOS, and Linux artifacts)
 
 ## Tech Stack
 
@@ -138,6 +138,7 @@ This project is wired to use the Tauri updater with GitHub Releases:
 - If an update exists, the app shows a themed toast with **Install now** / **Later** actions (no browser confirm popup)
 - CI workflow (`.github/workflows/desktop-release.yml`) builds signed desktop artifacts on `v*` tags and publishes release assets automatically
 - **Updater package policy (Windows):** release metadata now publishes separate updater targets for both **MSI** and **EXE** installs, so each installed type can receive auto-updates through its matching package.
+- Updater manifest (`latest.json`) is generated after Windows/macOS/Linux uploads, and includes platform entries for signed updater-compatible artifacts (`windows-*`, `darwin-*`, `linux-*`).
 - Desktop deep-link support is configured for `nexustasks://...` (used by the reset-password success flow to open the installed app from browser).
 
 Before shipping updater-enabled releases, you must configure signing:

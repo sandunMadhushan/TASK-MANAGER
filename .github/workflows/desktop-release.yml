@@ -50,69 +50,57 @@ jobs:
       - name: Build Tauri bundles (signed)
         run: npm run tauri:build
 
-      - name: Generate updater latest.json
-        shell: pwsh
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Nexus Tasks ${{ github.ref_name }}
+          files: |
+            src-tauri/target/release/bundle/**/*.msi
+            src-tauri/target/release/bundle/**/*.exe
+            src-tauri/target/release/bundle/**/*.sig
+          fail_on_unmatched_files: false
+          generate_release_notes: true
+
+  build-and-release-macos:
+    name: Build + Publish macOS artifacts
+    runs-on: macos-latest
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      VITE_API_URL: ${{ secrets.VITE_API_URL }}
+      VITE_NOVU_APPLICATION_IDENTIFIER: ${{ secrets.VITE_NOVU_APPLICATION_IDENTIFIER }}
+      VITE_NOVU_BACKEND_URL: ${{ secrets.VITE_NOVU_BACKEND_URL }}
+      VITE_NOVU_SOCKET_URL: ${{ secrets.VITE_NOVU_SOCKET_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate required frontend env for production build
         run: |
-          $tag = "${{ github.ref_name }}"
-          $version = $tag.TrimStart("v")
-          $releaseDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-          $repo = "${{ github.repository }}"
+          if [ -z "$VITE_API_URL" ]; then
+            echo "Missing secret VITE_API_URL. Add it in GitHub repo secrets before running release workflow."
+            exit 1
+          fi
 
-          $bundleRoot = "src-tauri/target/release/bundle"
-          $msi = Get-ChildItem -Path $bundleRoot -Recurse -Filter "*.msi" | Select-Object -First 1
-          $exe = Get-ChildItem -Path $bundleRoot -Recurse -Filter "*.exe" | Select-Object -First 1
+      - name: Generate app icons
+        run: npm run icons:generate
 
-          if (!$msi -and !$exe) {
-            throw "No MSI or EXE artifact found for updater manifest generation."
-          }
-
-          $platforms = [ordered]@{}
-
-          if ($msi) {
-            $msiSigPath = "$($msi.FullName).sig"
-            if (!(Test-Path $msiSigPath)) {
-              throw "Missing MSI signature file: $msiSigPath"
-            }
-            $msiSignature = (Get-Content -Path $msiSigPath -Raw).Trim()
-            $msiReleaseName = ($msi.Name -replace ' ', '.')
-            $msiUrl = "https://github.com/$repo/releases/download/$tag/$msiReleaseName"
-            $platforms["windows-x86_64-msi"] = [ordered]@{
-              signature = $msiSignature
-              url = $msiUrl
-            }
-          }
-
-          if ($exe) {
-            $exeSigPath = "$($exe.FullName).sig"
-            if (!(Test-Path $exeSigPath)) {
-              throw "Missing EXE signature file: $exeSigPath"
-            }
-            $exeSignature = (Get-Content -Path $exeSigPath -Raw).Trim()
-            $exeReleaseName = ($exe.Name -replace ' ', '.')
-            $exeUrl = "https://github.com/$repo/releases/download/$tag/$exeReleaseName"
-            $platforms["windows-x86_64-exe"] = [ordered]@{
-              signature = $exeSignature
-              url = $exeUrl
-            }
-          }
-
-          # Backward compatibility for older app versions that don't pass explicit target.
-          if ($msi) {
-            $platforms["windows-x86_64"] = $platforms["windows-x86_64-msi"]
-          } elseif ($exe) {
-            $platforms["windows-x86_64"] = $platforms["windows-x86_64-exe"]
-          }
-
-          $manifest = [ordered]@{
-            version = $version
-            notes = "Release $tag"
-            pub_date = $releaseDate
-            platforms = $platforms
-          }
-
-          $json = $manifest | ConvertTo-Json -Depth 10
-          New-Item -ItemType Directory -Path "src-tauri/target/release" -Force | Out-Null
-          Set-Content -Path "src-tauri/target/release/latest.json" -Value $json -Encoding utf8
+      - name: Build Tauri bundles (signed)
+        run: npm run tauri:build
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
@@ -120,10 +108,217 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: Nexus Tasks ${{ github.ref_name }}
           files: |
-            src-tauri/target/release/latest.json
-            src-tauri/target/release/**/latest.json
-            src-tauri/target/release/bundle/**/*.msi
-            src-tauri/target/release/bundle/**/*.exe
+            src-tauri/target/release/bundle/**/*.dmg
+            src-tauri/target/release/bundle/**/*.app.tar.gz
             src-tauri/target/release/bundle/**/*.sig
           fail_on_unmatched_files: false
-          generate_release_notes: true
+          generate_release_notes: false
+
+  generate-updater-manifest:
+    name: Generate + Publish updater manifest
+    runs-on: ubuntu-latest
+    needs:
+      - build-and-release-windows
+      - build-and-release-macos
+      - build-and-release-linux
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build unified latest.json from release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          mkdir -p src-tauri/target/release
+
+          gh api "repos/$REPO/releases/tags/$TAG" > /tmp/release.json
+
+          node <<'EOF'
+          const fs = require('node:fs')
+
+          const release = JSON.parse(fs.readFileSync('/tmp/release.json', 'utf8'))
+          const tag = process.env.TAG
+          const version = tag.replace(/^v/, '')
+          const repo = process.env.REPO
+          const assets = Array.isArray(release.assets) ? release.assets : []
+          const byName = new Map(assets.map((a) => [a.name, a]))
+
+          function assetUrl(name) {
+            return `https://github.com/${repo}/releases/download/${tag}/${name}`
+          }
+
+          function hasSig(name) {
+            return byName.has(`${name}.sig`)
+          }
+
+          function archFromName(name) {
+            const lower = name.toLowerCase()
+            if (lower.includes('aarch64') || lower.includes('arm64')) return 'aarch64'
+            return 'x86_64'
+          }
+
+          function pickAsset(predicate) {
+            return assets.find((asset) => predicate(asset.name))
+          }
+
+          const platforms = {}
+
+          // Windows updater targets.
+          const msi = pickAsset((name) => name.toLowerCase().endsWith('.msi') && hasSig(name))
+          const exe = pickAsset((name) => name.toLowerCase().endsWith('.exe') && hasSig(name))
+
+          // We fetch signatures through browser download URLs using curl.
+          const cp = require('node:child_process')
+          function fetchText(url) {
+            return cp.execSync(`curl -fsSL "${url}"`, { encoding: 'utf8' }).trim()
+          }
+
+          if (msi) {
+            const sigAsset = byName.get(`${msi.name}.sig`)
+            if (sigAsset) {
+              platforms['windows-x86_64-msi'] = {
+                signature: fetchText(sigAsset.browser_download_url),
+                url: assetUrl(msi.name),
+              }
+              // Backward compatibility for older desktop builds.
+              platforms['windows-x86_64'] = platforms['windows-x86_64-msi']
+            }
+          }
+
+          if (exe) {
+            const sigAsset = byName.get(`${exe.name}.sig`)
+            if (sigAsset) {
+              platforms['windows-x86_64-exe'] = {
+                signature: fetchText(sigAsset.browser_download_url),
+                url: assetUrl(exe.name),
+              }
+              if (!platforms['windows-x86_64']) {
+                platforms['windows-x86_64'] = platforms['windows-x86_64-exe']
+              }
+            }
+          }
+
+          // macOS updater target uses .app.tar.gz (+ .sig)
+          const macAssets = assets.filter(
+            (asset) => asset.name.toLowerCase().endsWith('.app.tar.gz') && hasSig(asset.name)
+          )
+          for (const asset of macAssets) {
+            const arch = archFromName(asset.name)
+            const key = `darwin-${arch}`
+            const sigAsset = byName.get(`${asset.name}.sig`)
+            if (!sigAsset) continue
+            platforms[key] = {
+              signature: fetchText(sigAsset.browser_download_url),
+              url: assetUrl(asset.name),
+            }
+          }
+
+          // Linux updater target prefers AppImage (+ .sig)
+          const linuxAssets = assets.filter(
+            (asset) =>
+              asset.name.toLowerCase().endsWith('.appimage') &&
+              hasSig(asset.name)
+          )
+          for (const asset of linuxAssets) {
+            const arch = archFromName(asset.name)
+            const key = `linux-${arch}`
+            const sigAsset = byName.get(`${asset.name}.sig`)
+            if (!sigAsset) continue
+            platforms[key] = {
+              signature: fetchText(sigAsset.browser_download_url),
+              url: assetUrl(asset.name),
+            }
+          }
+
+          if (Object.keys(platforms).length === 0) {
+            throw new Error('No signed updater-compatible assets found to build latest.json')
+          }
+
+          const manifest = {
+            version,
+            notes: `Release ${tag}`,
+            pub_date: new Date().toISOString(),
+            platforms,
+          }
+
+          fs.writeFileSync(
+            'src-tauri/target/release/latest.json',
+            `${JSON.stringify(manifest, null, 2)}\n`,
+            'utf8'
+          )
+          EOF
+
+      - name: Upload latest.json to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release upload "$TAG" "src-tauri/target/release/latest.json" --clobber
+
+  build-and-release-linux:
+    name: Build + Publish Linux artifacts
+    runs-on: ubuntu-latest
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      VITE_API_URL: ${{ secrets.VITE_API_URL }}
+      VITE_NOVU_APPLICATION_IDENTIFIER: ${{ secrets.VITE_NOVU_APPLICATION_IDENTIFIER }}
+      VITE_NOVU_BACKEND_URL: ${{ secrets.VITE_NOVU_BACKEND_URL }}
+      VITE_NOVU_SOCKET_URL: ${{ secrets.VITE_NOVU_SOCKET_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            pkg-config
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate required frontend env for production build
+        run: |
+          if [ -z "$VITE_API_URL" ]; then
+            echo "Missing secret VITE_API_URL. Add it in GitHub repo secrets before running release workflow."
+            exit 1
+          fi
+
+      - name: Generate app icons
+        run: npm run icons:generate
+
+      - name: Build Tauri bundles (signed)
+        run: npm run tauri:build
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Nexus Tasks ${{ github.ref_name }}
+          files: |
+            src-tauri/target/release/bundle/**/*.AppImage
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.rpm
+            src-tauri/target/release/bundle/**/*.tar.gz
+            src-tauri/target/release/bundle/**/*.sig
+          fail_on_unmatched_files: false
+          generate_release_notes: false
