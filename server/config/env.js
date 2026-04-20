@@ -4,12 +4,23 @@ dotenv.config()
 
 const nodeEnv = process.env.NODE_ENV ?? 'development'
 
+/** Canonical origin string (scheme + host + port) for CORS and email links. */
+function normalizeClientOriginEntry(entry) {
+  const t = entry.trim()
+  if (!t) return ''
+  try {
+    return new URL(t).origin
+  } catch {
+    return t.replace(/\/$/, '')
+  }
+}
+
 function parseClientOrigins(raw) {
   const fromEnv = typeof raw === 'string' ? raw.trim() : ''
   if (fromEnv) {
     return fromEnv
       .split(',')
-      .map((s) => s.trim())
+      .map((s) => normalizeClientOriginEntry(s))
       .filter(Boolean)
   }
   if (nodeEnv === 'production') {

@@ -13,6 +13,7 @@ export const app = express()
 
 app.use(
   cors({
+    credentials: true,
     origin(origin, callback) {
       if (!origin) {
         return callback(null, true)
