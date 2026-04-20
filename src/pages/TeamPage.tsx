@@ -121,6 +121,7 @@ export function TeamPage() {
         name: names[index] && String(names[index]).trim() ? String(names[index]).trim() : String(id),
       }))
       .filter((group) => Boolean(group.id))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
   }, [selfTeamRow, currentUser])
 
   function openInvite() {
