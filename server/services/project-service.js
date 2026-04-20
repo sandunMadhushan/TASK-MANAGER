@@ -8,30 +8,6 @@ function normalizeWorkspaceIds(value) {
 
 export async function getProjectsForUser(workspaceIds) {
   const scoped = normalizeWorkspaceIds(workspaceIds)
-  if (scoped.length > 0) {
-    const existing = await ProjectModel.find({ workspaceId: { $in: scoped } }).select(
-      'workspaceId name'
-    )
-    const byWorkspace = new Map()
-    for (const row of existing) {
-      const key = String(row.workspaceId)
-      byWorkspace.set(key, (byWorkspace.get(key) ?? 0) + 1)
-    }
-    const missing = scoped.filter((workspaceId) => !byWorkspace.has(String(workspaceId)))
-    if (missing.length > 0) {
-      await ProjectModel.insertMany(
-        missing.map((workspaceId) => ({
-          name: 'General',
-          workspaceId,
-          createdBy: workspaceId,
-          status: 'active',
-        })),
-        { ordered: false }
-      ).catch(() => {
-        // ignore duplicate races
-      })
-    }
-  }
   const query = scoped.length > 0 ? { workspaceId: { $in: scoped } } : {}
   const rows = await ProjectModel.find(query).sort({ name: 1 })
   return rows.map((row) => row.toJSON())

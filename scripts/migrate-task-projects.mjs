@@ -17,15 +17,26 @@ async function run() {
 
   for (const workspaceId of workspaceIds) {
     const workspace = String(workspaceId)
-    let project = await ProjectModel.findOne({ workspaceId: workspace, name: 'General' })
-    if (!project) {
-      project = await ProjectModel.create({
-        name: 'General',
-        workspaceId: workspace,
-        createdBy: workspace,
-        status: 'active',
-      })
+    const projectCount = await ProjectModel.countDocuments({ workspaceId: workspace })
+    if (projectCount === 0) {
+      console.warn(
+        `Skipping workspace ${workspace}: no projects; create one project in that workspace before migrating legacy tasks.`
+      )
+      continue
     }
+    if (projectCount > 1) {
+      const orphanCount = await TaskModel.countDocuments({
+        workspaceId: workspace,
+        $or: [{ projectId: { $exists: false } }, { projectId: null }],
+      })
+      if (orphanCount > 0) {
+        console.warn(
+          `Skipping workspace ${workspace}: ${projectCount} projects exist and ${orphanCount} tasks lack projectId; assign projectId manually.`
+        )
+      }
+      continue
+    }
+    const project = await ProjectModel.findOne({ workspaceId: workspace })
     await TaskModel.updateMany(
       { workspaceId: workspace, $or: [{ projectId: { $exists: false } }, { projectId: null }] },
       { $set: { projectId: project._id } }
