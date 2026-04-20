@@ -94,6 +94,29 @@ export function TeamPage() {
     () => isWorkspaceOwnerConfirmedFromTeam(currentUser, users),
     [currentUser, users]
   )
+  const selfTeamRow = useMemo(
+    () => users.find((user) => user.id === currentUser?.id),
+    [users, currentUser?.id]
+  )
+  const visibleGroups = useMemo(() => {
+    const ids = Array.isArray(selfTeamRow?.workspaceIds)
+      ? selfTeamRow.workspaceIds
+      : Array.isArray(currentUser?.workspaceIds)
+        ? currentUser.workspaceIds
+        : []
+    const names = Array.isArray(selfTeamRow?.workspaceNames)
+      ? selfTeamRow.workspaceNames
+      : Array.isArray(currentUser?.workspaceNames)
+        ? currentUser.workspaceNames
+        : []
+
+    return ids
+      .map((id, index) => ({
+        id: String(id),
+        name: names[index] && String(names[index]).trim() ? String(names[index]).trim() : String(id),
+      }))
+      .filter((group) => Boolean(group.id))
+  }, [selfTeamRow, currentUser])
 
   function openInvite() {
     if (!isWorkspaceOwner) return
@@ -382,88 +405,100 @@ export function TeamPage() {
         </div>
       </motion.div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {visibleUsers.map((user, index) => (
-          <motion.div
-            key={user.id}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: Math.min(index, 8) * 0.04, duration: 0.3 }}
-          >
-            <Card className="border-white/10 bg-card/70 backdrop-blur-xl">
-              <CardHeader className="pb-2">
-                <CardTitle className="inline-flex items-center gap-2 text-base">
-                  <Avatar size="sm">
-                    <AvatarImage alt={safeText(user.name, 'Unknown user')} src={user.avatarUrl} />
-                    <AvatarFallback>{safeInitials(user.name)}</AvatarFallback>
-                  </Avatar>
-                  {safeText(user.name, 'Unknown user')}
-                  {currentUser?.id === user.id ? (
-                    <span className="rounded-full border border-violet-300/35 bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-200">
-                      You
-                    </span>
-                  ) : null}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0 text-sm text-muted-foreground">
-                <p className="inline-flex items-center gap-2">
-                  <Mail className="size-3.5" />
-                  {safeText(user.email, 'No email')}
-                </p>
-                {Array.isArray(user.workspaceNames) && user.workspaceNames.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {user.workspaceNames.map((group) => (
-                      <span
-                        key={`${user.id}-${group}`}
-                        className="rounded-full border border-sky-300/35 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-200"
-                      >
-                        {group}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2">
-                    <p className="text-muted-foreground">Total</p>
-                    <p className="mt-1 inline-flex items-center gap-1 font-semibold text-foreground">
-                      <ListChecks className="size-3.5 text-primary" />
-                      {statsByUser.get(user.id)?.total ?? 0}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2">
-                    <p className="text-muted-foreground">To do</p>
-                    <p className="mt-1 inline-flex items-center gap-1 font-semibold text-foreground">
-                      <Timer className="size-3.5 text-amber-300" />
-                      {statsByUser.get(user.id)?.todo ?? 0}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2">
-                    <p className="text-muted-foreground">In progress</p>
-                    <p className="mt-1 font-semibold text-foreground">
-                      {statsByUser.get(user.id)?.inProgress ?? 0}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2">
-                    <p className="text-muted-foreground">Done</p>
-                    <p className="mt-1 inline-flex items-center gap-1 font-semibold text-foreground">
-                      <CheckCircle2 className="size-3.5 text-emerald-300" />
-                      {statsByUser.get(user.id)?.done ?? 0}
-                    </p>
-                  </div>
+      <div className="space-y-6">
+        {visibleGroups.length > 0 ? (
+          visibleGroups.map((group) => {
+            const members = visibleUsers.filter((user) =>
+              Array.isArray(user.workspaceIds) && user.workspaceIds.map(String).includes(group.id)
+            )
+            if (members.length === 0) return null
+            return (
+              <section key={`group-${group.id}`} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold tracking-wide text-foreground">
+                    Group: {group.name}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">{members.length} member(s)</p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="w-full"
-                  type="button"
-                  onClick={() => navigate(`/tasks?assignee=${encodeURIComponent(user.id)}`)}
-                >
-                  View assigned tasks
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {members.map((user, index) => (
+                    <motion.div
+                      key={`${group.id}-${user.id}`}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min(index, 8) * 0.04, duration: 0.3 }}
+                    >
+                      <Card className="border-white/10 bg-card/70 backdrop-blur-xl">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="inline-flex items-center gap-2 text-base">
+                            <Avatar size="sm">
+                              <AvatarImage alt={safeText(user.name, 'Unknown user')} src={user.avatarUrl} />
+                              <AvatarFallback>{safeInitials(user.name)}</AvatarFallback>
+                            </Avatar>
+                            {safeText(user.name, 'Unknown user')}
+                            {currentUser?.id === user.id ? (
+                              <span className="rounded-full border border-violet-300/35 bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-200">
+                                You
+                              </span>
+                            ) : null}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3 pt-0 text-sm text-muted-foreground">
+                          <p className="inline-flex items-center gap-2">
+                            <Mail className="size-3.5" />
+                            {safeText(user.email, 'No email')}
+                          </p>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2">
+                              <p className="text-muted-foreground">Total</p>
+                              <p className="mt-1 inline-flex items-center gap-1 font-semibold text-foreground">
+                                <ListChecks className="size-3.5 text-primary" />
+                                {statsByUser.get(user.id)?.total ?? 0}
+                              </p>
+                            </div>
+                            <div className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2">
+                              <p className="text-muted-foreground">To do</p>
+                              <p className="mt-1 inline-flex items-center gap-1 font-semibold text-foreground">
+                                <Timer className="size-3.5 text-amber-300" />
+                                {statsByUser.get(user.id)?.todo ?? 0}
+                              </p>
+                            </div>
+                            <div className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2">
+                              <p className="text-muted-foreground">In progress</p>
+                              <p className="mt-1 font-semibold text-foreground">
+                                {statsByUser.get(user.id)?.inProgress ?? 0}
+                              </p>
+                            </div>
+                            <div className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2">
+                              <p className="text-muted-foreground">Done</p>
+                              <p className="mt-1 inline-flex items-center gap-1 font-semibold text-foreground">
+                                <CheckCircle2 className="size-3.5 text-emerald-300" />
+                                {statsByUser.get(user.id)?.done ?? 0}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="w-full"
+                            type="button"
+                            onClick={() => navigate(`/tasks?assignee=${encodeURIComponent(user.id)}`)}
+                          >
+                            View assigned tasks
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              </section>
+            )
+          })
+        ) : (
+          <p className="rounded-xl border border-dashed border-white/15 bg-white/4 p-4 text-center text-sm text-muted-foreground">
+            No group memberships found for this account.
+          </p>
+        )}
       </div>
 
     </div>

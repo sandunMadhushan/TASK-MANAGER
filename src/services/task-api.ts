@@ -17,6 +17,7 @@ type TaskDto = {
   description: string
   status: TaskStatus
   assignedTo?: string | User | Array<string | User> | null
+  createdBy?: string | User | null
   dueDate: string
   createdAt?: string
 }
@@ -34,6 +35,16 @@ function mapTaskDto(dto: TaskDto): Task {
   const assignedToIds = rawAssignees
     .map((v) => (typeof v === 'string' ? v : v.id))
     .filter(Boolean)
+  const createdById =
+    typeof dto.createdBy === 'string'
+      ? dto.createdBy
+      : dto.createdBy && typeof dto.createdBy === 'object'
+        ? dto.createdBy.id
+        : undefined
+  const createdByName =
+    dto.createdBy && typeof dto.createdBy === 'object' && typeof dto.createdBy.name === 'string'
+      ? dto.createdBy.name
+      : undefined
 
   return {
     id: dto.id,
@@ -44,6 +55,8 @@ function mapTaskDto(dto: TaskDto): Task {
     dueDate: toDateInputValue(dto.dueDate),
     assignedToIds,
     assignees,
+    createdById,
+    createdByName,
     createdAt: dto.createdAt,
   }
 }

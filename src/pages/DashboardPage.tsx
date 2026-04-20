@@ -1,60 +1,62 @@
-import { motion } from 'framer-motion'
-import { Plus } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { motion } from "framer-motion";
+import { Plus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
-import { CreateTaskModal } from '@/components/tasks/CreateTaskModal'
-import { TaskListView } from '@/components/tasks/TaskListView'
-import { Button } from '@/components/ui/button'
-import { isDueWithinDays } from '@/lib/format-due-date'
-import { useAuthStore } from '@/store/auth-store'
-import { useTaskStore } from '@/store/task-store'
+import { CreateTaskModal } from "@/components/tasks/CreateTaskModal";
+import { TaskListView } from "@/components/tasks/TaskListView";
+import { Button } from "@/components/ui/button";
+import { isDueWithinDays } from "@/lib/format-due-date";
+import { useAuthStore } from "@/store/auth-store";
+import { useTaskStore } from "@/store/task-store";
 
 export function DashboardPage() {
-  const [createOpen, setCreateOpen] = useState(false)
-  const [createSession, setCreateSession] = useState(0)
-  const [now, setNow] = useState(() => new Date())
-  const [searchParams] = useSearchParams()
-  const tasks = useTaskStore((s) => s.tasks)
-  const currentUser = useAuthStore((s) => s.currentUser)
-  const searchText = (searchParams.get('q') ?? '').trim().toLowerCase()
-  const firstName = (currentUser?.name ?? 'there').split(' ')[0]
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createSession, setCreateSession] = useState(0);
+  const [now, setNow] = useState(() => new Date());
+  const [searchParams] = useSearchParams();
+  const tasks = useTaskStore((s) => s.tasks);
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const searchText = (searchParams.get("q") ?? "").trim().toLowerCase();
+  const firstName = (currentUser?.name ?? "there").split(" ")[0];
   const greeting = useMemo(() => {
-    const hour = now.getHours()
-    if (hour < 12) return 'Good morning'
-    if (hour < 18) return 'Good afternoon'
-    return 'Good evening'
-  }, [now])
+    const hour = now.getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
+  }, [now]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setNow(new Date())
-    }, 60_000)
-    return () => window.clearInterval(timer)
-  }, [])
+      setNow(new Date());
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   function openCreateModal() {
-    setCreateSession((s) => s + 1)
-    setCreateOpen(true)
+    setCreateSession((s) => s + 1);
+    setCreateOpen(true);
   }
 
   const { activeCount, dueSoonCount } = useMemo(() => {
-    const active = tasks.filter((t) => t.status !== 'done').length
+    const active = tasks.filter((t) => t.status !== "done").length;
     const dueSoon = tasks.filter(
-      (t) =>
-        t.status !== 'done' && isDueWithinDays(t.dueDate, 7)
-    ).length
-    return { activeCount: active, dueSoonCount: dueSoon }
-  }, [tasks])
+      (t) => t.status !== "done" && isDueWithinDays(t.dueDate, 7),
+    ).length;
+    return { activeCount: active, dueSoonCount: dueSoon };
+  }, [tasks]);
 
   const visibleTasks = useMemo(() => {
-    if (!searchText) return tasks
+    if (!searchText) return tasks;
     return tasks.filter((task) => {
-      const assigneeNames = (task.assignees ?? []).map((u) => u.name.toLowerCase()).join(' ')
-      const haystack = `${task.title} ${task.description} ${assigneeNames}`.toLowerCase()
-      return haystack.includes(searchText)
-    })
-  }, [searchText, tasks])
+      const assigneeNames = (task.assignees ?? [])
+        .map((u) => u.name.toLowerCase())
+        .join(" ");
+      const haystack =
+        `${task.title} ${task.description} ${assigneeNames}`.toLowerCase();
+      return haystack.includes(searchText);
+    });
+  }, [searchText, tasks]);
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -79,7 +81,8 @@ export function DashboardPage() {
               {greeting}, {firstName}
             </h1>
             <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
-              Stay focused on your workspace priorities, recent assignments, and upcoming due dates.
+              Stay focused on your workspace priorities, recent assignments, and
+              upcoming due dates.
             </p>
           </div>
           <motion.div
@@ -134,14 +137,16 @@ export function DashboardPage() {
         <TaskListView
           onCreateClick={openCreateModal}
           tasks={visibleTasks}
-          emptyTitle={searchText ? 'No tasks match your search' : 'No tasks yet'}
+          emptyTitle={
+            searchText ? "No tasks match your search" : "No tasks yet"
+          }
           emptyDescription={
             searchText
-              ? 'Try another keyword or open Tasks page for advanced filters.'
-              : 'Create your first task to see it appear here with motion.'
+              ? "Try another keyword or open Tasks page for advanced filters."
+              : "Create your first task to see it appear here with motion."
           }
         />
       </section>
     </div>
-  )
+  );
 }

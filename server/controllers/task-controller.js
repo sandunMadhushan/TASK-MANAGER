@@ -140,6 +140,13 @@ export async function updateTaskHandler(req, res, next) {
     if (!canAccessTask(previousTask, currentUserId)) {
       return res.status(404).json({ message: 'Task not found' })
     }
+    const createdById =
+      previousTask?.createdBy && typeof previousTask.createdBy === 'object'
+        ? previousTask.createdBy.id
+        : previousTask?.createdBy
+    if (String(createdById ?? '') !== String(currentUserId ?? '')) {
+      return res.status(403).json({ message: 'Only the task creator can edit this task.' })
+    }
 
     const task = await updateTask(taskId, {
       title,
@@ -234,6 +241,13 @@ export async function deleteTaskHandler(req, res, next) {
     const task = await getTaskById(taskId)
     if (!canAccessTask(task, currentUserId)) {
       return res.status(404).json({ message: 'Task not found' })
+    }
+    const createdById =
+      task?.createdBy && typeof task.createdBy === 'object'
+        ? task.createdBy.id
+        : task?.createdBy
+    if (String(createdById ?? '') !== String(currentUserId ?? '')) {
+      return res.status(403).json({ message: 'Only the task creator can delete this task.' })
     }
     const deleted = await deleteTask(taskId)
 

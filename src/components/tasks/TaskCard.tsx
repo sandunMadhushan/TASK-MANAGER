@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import { formatDueDateLabel } from '@/lib/format-due-date'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/auth-store'
 import { useSettingsStore } from '@/store/settings-store'
 import { useTaskStore } from '@/store/task-store'
 import type { Task, TaskStatus } from '@/types/task'
@@ -40,12 +41,15 @@ export function TaskCard({ task, index }: TaskCardProps) {
   const compactCards = useSettingsStore((s) => s.compactCards)
   const reduceMotion = prefersReducedMotion || forceReducedMotion
   const users = useTaskStore((s) => s.users)
+  const currentUser = useAuthStore((s) => s.currentUser)
   const deleteTask = useTaskStore((s) => s.deleteTask)
   const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus)
   const updatingTaskId = useTaskStore((s) => s.updatingTaskId)
   const deletingTaskId = useTaskStore((s) => s.deletingTaskId)
   const isUpdating = updatingTaskId === task.id
   const isDeleting = deletingTaskId === task.id
+  const canEditTask = Boolean(currentUser?.id && task.createdById && currentUser.id === task.createdById)
+  const canDeleteTask = canEditTask
   const statusLabel: Record<TaskStatus, string> = {
     todo: 'To do',
     'in-progress': 'In progress',
@@ -108,6 +112,12 @@ export function TaskCard({ task, index }: TaskCardProps) {
                   {resolvedAssignees.length
                     ? resolvedAssignees.map((u) => u.name).join(', ')
                     : 'Unassigned'}
+                </span>
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Assigned by:{' '}
+                <span className="font-medium text-foreground/90">
+                  {task.createdByName?.trim() ? task.createdByName : 'Unknown'}
                 </span>
               </p>
               {resolvedAssignees.length > 0 ? (
@@ -176,28 +186,32 @@ export function TaskCard({ task, index }: TaskCardProps) {
             )}
           </div>
           <div className="order-1 ml-auto inline-flex items-center gap-1 sm:order-3">
-            <Button
-              aria-label={`Edit ${task.title}`}
-              size="sm"
-              variant="ghost"
-              type="button"
-              className="hover:bg-white/10 focus-visible:ring-primary/40"
-              disabled={isDeleting || isUpdating}
-              onClick={openEdit}
-            >
-              <Pencil className="size-4" />
-            </Button>
-            <Button
-              aria-label={`Delete ${task.title}`}
-              size="sm"
-              variant="ghost"
-              type="button"
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive focus-visible:ring-destructive/35"
-              disabled={isDeleting || isUpdating}
-              onClick={() => void deleteTask(task.id)}
-            >
-              <Trash2 className="size-4" />
-            </Button>
+            {canEditTask ? (
+              <Button
+                aria-label={`Edit ${task.title}`}
+                size="sm"
+                variant="ghost"
+                type="button"
+                className="hover:bg-white/10 focus-visible:ring-primary/40"
+                disabled={isDeleting || isUpdating}
+                onClick={openEdit}
+              >
+                <Pencil className="size-4" />
+              </Button>
+            ) : null}
+            {canDeleteTask ? (
+              <Button
+                aria-label={`Delete ${task.title}`}
+                size="sm"
+                variant="ghost"
+                type="button"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive focus-visible:ring-destructive/35"
+                disabled={isDeleting || isUpdating}
+                onClick={() => void deleteTask(task.id)}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            ) : null}
           </div>
         </CardFooter>
       </Card>

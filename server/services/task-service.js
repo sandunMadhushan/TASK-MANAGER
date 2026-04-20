@@ -1,7 +1,9 @@
 import { TaskModel } from '../models/task-model.js'
 
 export async function getTaskById(taskId) {
-  const task = await TaskModel.findById(taskId).populate('assignedTo')
+  const task = await TaskModel.findById(taskId)
+    .populate('assignedTo')
+    .populate('createdBy')
   return task ? task.toJSON() : null
 }
 
@@ -16,7 +18,9 @@ export async function createTask(payload) {
     dueDate: payload.dueDate,
   })
 
-  const hydrated = await TaskModel.findById(task._id).populate('assignedTo')
+  const hydrated = await TaskModel.findById(task._id)
+    .populate('assignedTo')
+    .populate('createdBy')
   return hydrated.toJSON()
 }
 
@@ -36,6 +40,7 @@ export async function getTasksForUser(userId, workspaceIds = []) {
   }
   const tasks = await TaskModel.find(baseQuery)
     .populate('assignedTo')
+    .populate('createdBy')
     .sort({ createdAt: -1 })
   return tasks.map((task) => task.toJSON())
 }
@@ -48,7 +53,9 @@ export async function updateTaskStatus(taskId, status) {
   )
 
   if (!task) return null
-  const hydrated = await TaskModel.findById(task._id).populate('assignedTo')
+  const hydrated = await TaskModel.findById(task._id)
+    .populate('assignedTo')
+    .populate('createdBy')
   return hydrated.toJSON()
 }
 
@@ -66,7 +73,9 @@ export async function updateTask(taskId, payload) {
   })
 
   if (!task) return null
-  const hydrated = await TaskModel.findById(task._id).populate('assignedTo')
+  const hydrated = await TaskModel.findById(task._id)
+    .populate('assignedTo')
+    .populate('createdBy')
   return hydrated.toJSON()
 }
 
