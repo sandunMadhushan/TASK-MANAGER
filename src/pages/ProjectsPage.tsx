@@ -55,9 +55,11 @@ export function ProjectsPage() {
     return ids.map((id, index) => {
       const sid = String(id)
       const raw = names[index]
+      const normalized = raw !== undefined && raw !== null ? String(raw).trim() : ''
+      const hasRealName = normalized !== '' && normalized !== sid
       const label =
-        raw !== undefined && raw !== null && String(raw).trim() !== ''
-          ? String(raw).trim()
+        hasRealName
+          ? normalized
           : (roster.get(sid) ?? 'Workspace')
       return { id: sid, label }
     })
@@ -240,7 +242,7 @@ export function ProjectsPage() {
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select workspace" />
                   </SelectTrigger>
-                  <SelectContent side="bottom" sideOffset={8}>
+                  <SelectContent side="bottom" sideOffset={8} alignItemWithTrigger={false}>
                     {workspaceOptions.map((o) => (
                       <SelectItem key={o.id} value={o.id}>
                         {o.label}
@@ -298,7 +300,7 @@ export function ProjectsPage() {
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent side="bottom" sideOffset={8}>
+                  <SelectContent side="bottom" sideOffset={8} alignItemWithTrigger={false}>
                     {workspaceOptions.map((o) => (
                       <SelectItem key={o.id} value={o.id}>
                         {o.label}

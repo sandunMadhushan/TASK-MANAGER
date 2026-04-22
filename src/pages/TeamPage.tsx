@@ -240,7 +240,7 @@ export function TeamPage() {
     if (!renameGroupTarget) return
     const nextName = renameGroupName.trim()
     if (!nextName) {
-      toast.error('Group name is required')
+      toast.error('Workspace name is required')
       return
     }
     if (nextName === renameGroupTarget.name) {
@@ -251,13 +251,13 @@ export function TeamPage() {
     try {
       await updateWorkspaceNameApi(renameGroupTarget.id, nextName)
       await Promise.all([fetchUsers(), useAuthStore.getState().bootstrap()])
-      toast.success('Group name updated')
+      toast.success('Workspace name updated')
       setRenameDialogOpen(false)
       setRenameGroupTarget(null)
       setRenameGroupName('')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to update group name.'
-      toast.error('Failed to update group name', { description: message })
+      const message = error instanceof Error ? error.message : 'Unable to update workspace name.'
+      toast.error('Failed to update workspace name', { description: message })
     } finally {
       setRenamingGroupId(null)
     }
@@ -425,17 +425,17 @@ export function TeamPage() {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Rename group</DialogTitle>
+            <DialogTitle>Rename workspace</DialogTitle>
             <DialogDescription>
-              Update the display name of your team group.
+              Update the display name of your workspace.
             </DialogDescription>
           </DialogHeader>
           <form className="space-y-3" onSubmit={handleRenameGroupSubmit}>
             <Input
               value={renameGroupName}
               onChange={(event) => setRenameGroupName(event.target.value)}
-              placeholder="Group name"
-              aria-label="Group name"
+              placeholder="Workspace name"
+              aria-label="Workspace name"
               maxLength={80}
             />
             <div className="flex justify-end gap-2">
@@ -492,7 +492,7 @@ export function TeamPage() {
                 <div className="flex items-center justify-between">
                   <div className="inline-flex items-center gap-2">
                     <h2 className="text-sm font-semibold tracking-wide text-foreground">
-                      Group: {group.name}
+                      Workspace: {group.name}
                     </h2>
                     {currentUser?.id === group.id ? (
                       <Button
@@ -502,8 +502,8 @@ export function TeamPage() {
                         className="size-6"
                         disabled={renamingGroupId === group.id}
                         onClick={() => openRenameGroupDialog(group.id, group.name)}
-                        aria-label={`Edit group name ${group.name}`}
-                        title="Edit group name"
+                        aria-label={`Edit workspace name ${group.name}`}
+                        title="Edit workspace name"
                       >
                         <Pencil className="size-3.5" />
                       </Button>

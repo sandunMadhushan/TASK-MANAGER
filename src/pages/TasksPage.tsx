@@ -198,7 +198,7 @@ export function TasksPage() {
 
       <section className="rounded-2xl border border-white/10 bg-white/4 p-3 backdrop-blur-md sm:p-4">
         <div className="grid gap-3 md:grid-cols-5">
-          <label className="relative md:col-span-2">
+          <label className="relative block md:col-span-2">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={searchText}

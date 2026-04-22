@@ -89,12 +89,13 @@ export function DashboardPage() {
 
   const statsTasks = overviewTasks ?? tasks;
 
-  const { activeCount, dueSoonCount } = useMemo(() => {
+  const { activeCount, dueSoonCount, completedCount } = useMemo(() => {
     const active = statsTasks.filter((t) => t.status !== "done").length;
     const dueSoon = statsTasks.filter(
       (t) => t.status !== "done" && isDueWithinDays(t.dueDate, 7),
     ).length;
-    return { activeCount: active, dueSoonCount: dueSoon };
+    const completed = statsTasks.filter((t) => t.status === "done").length;
+    return { activeCount: active, dueSoonCount: dueSoon, completedCount: completed };
   }, [statsTasks]);
 
   const visibleTasks = useMemo(() => {
@@ -117,60 +118,66 @@ export function DashboardPage() {
         onOpenChange={setCreateOpen}
       />
 
-      <motion.div
+      <motion.section
         animate={{ opacity: 1, y: 0 }}
-        className="space-y-2"
+        className="relative overflow-hidden rounded-2xl border border-white/10 bg-linear-to-b from-white/8 via-white/4 to-transparent p-4 shadow-xl shadow-black/20 backdrop-blur-md md:p-6"
         initial={{ opacity: 0, y: 12 }}
         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       >
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-          Overview
-        </p>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-2">
-            <h1 className="font-heading text-3xl font-semibold tracking-tight text-balance md:text-4xl">
-              {greeting}, {firstName}
-            </h1>
-            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
-              Stay focused on your workspace priorities, recent assignments, and
-              upcoming due dates.
-            </p>
-          </div>
-          <motion.div
-            className="flex flex-wrap items-center gap-3"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.35 }}
-          >
-            <div className="flex gap-3">
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left shadow-lg shadow-black/20 backdrop-blur-md">
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Active
-                </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
-                  {activeCount}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left shadow-lg shadow-black/20 backdrop-blur-md">
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Due in 7d
-                </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
-                  {dueSoonCount}
-                </p>
-              </div>
+        <div className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full bg-primary/12 blur-3xl" />
+        <div className="relative space-y-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                Workspace overview
+              </p>
+              <h1 className="font-heading text-3xl font-semibold tracking-tight text-balance md:text-4xl">
+                {greeting}, {firstName}
+              </h1>
+              <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
+                Keep track of what is active now, what needs attention this week, and how much work
+                your workspace has completed.
+              </p>
             </div>
             <Button
-              className="shadow-lg shadow-primary/25"
+              className="w-full shadow-lg shadow-primary/25 sm:w-auto"
               type="button"
               onClick={openCreateModal}
             >
               <Plus className="size-4" />
               New task
             </Button>
+          </div>
+
+          <motion.div
+            className="grid gap-3 sm:grid-cols-3"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.35 }}
+          >
+            <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3">
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Active tasks
+              </p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{activeCount}</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3">
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Due in 7 days
+              </p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{dueSoonCount}</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3">
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Completed
+              </p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+                {completedCount}
+              </p>
+            </div>
           </motion.div>
         </div>
-      </motion.div>
+      </motion.section>
 
       <ProjectOverviewSection tasks={overviewTasks} projects={projects} anchorDate={now} />
 
