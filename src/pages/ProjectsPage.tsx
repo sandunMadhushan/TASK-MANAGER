@@ -83,7 +83,9 @@ export function ProjectsPage() {
     if (!createOpen) return
     if (workspaceOptions.length === 0) return
     if (!createWorkspaceId || !workspaceOptions.some((o) => o.id === createWorkspaceId)) {
-      setCreateWorkspaceId(defaultWorkspaceId || workspaceOptions[0].id)
+      const preferred =
+        workspaceOptions.find((o) => o.id === defaultWorkspaceId)?.id ?? workspaceOptions[0].id
+      setCreateWorkspaceId(preferred)
     }
   }, [createOpen, createWorkspaceId, defaultWorkspaceId, workspaceOptions])
 
@@ -175,7 +177,10 @@ export function ProjectsPage() {
   async function handleCreateProject() {
     const name = projectName.trim()
     if (!name) return
-    const ws = createWorkspaceId || defaultWorkspaceId
+    const ws =
+      workspaceOptions.find((o) => o.id === createWorkspaceId)?.id ??
+      workspaceOptions.find((o) => o.id === defaultWorkspaceId)?.id ??
+      workspaceOptions[0]?.id
     const ok = await addProject({ name, workspaceId: workspaceOptions.length > 1 ? ws : undefined })
     if (!ok) return
     setCreateOpen(false)
