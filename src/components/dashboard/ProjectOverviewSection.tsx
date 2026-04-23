@@ -67,11 +67,24 @@ function MiniDueTimeline({ tasks, anchorDate }: { tasks: Task[]; anchorDate: Dat
     );
   }
 
+  const overdueCount = markers.filter((m) => m.overdue).length;
+
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-[10px] uppercase tracking-wide text-muted-foreground">
-        <span>Due window</span>
-        <span>Today → +{HORIZON_DAYS}d</span>
+    <div className="space-y-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Upcoming deadlines (next {HORIZON_DAYS} days)
+        </p>
+        <div className="inline-flex items-center gap-3 text-[10px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <span className="size-2 rounded-full bg-violet-400/95" />
+            Upcoming
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="size-2 rounded-full bg-red-400/95" />
+            Overdue
+          </span>
+        </div>
       </div>
       <div className="relative h-7 rounded-md border border-white/10 bg-black/30">
         <div
@@ -93,6 +106,12 @@ function MiniDueTimeline({ tasks, anchorDate }: { tasks: Task[]; anchorDate: Dat
           />
         ))}
       </div>
+      <p className="text-[11px] text-muted-foreground">
+        Timeline starts at today and runs {HORIZON_DAYS} days ahead.{" "}
+        {overdueCount > 0
+          ? `${overdueCount} overdue task${overdueCount === 1 ? "" : "s"} shown in red.`
+          : "No overdue tasks in this project."}
+      </p>
     </div>
   );
 }
@@ -221,7 +240,7 @@ export function ProjectOverviewSection({ tasks, projects, anchorDate }: Props) {
           ))}
         </div>
       ) : activeProjects.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.03] px-4 py-8 text-center text-sm text-muted-foreground">
+        <div className="rounded-xl border border-dashed border-white/15 bg-white/3 px-4 py-8 text-center text-sm text-muted-foreground">
           <FolderKanban className="mx-auto mb-2 size-8 opacity-40" />
           <p>No active projects yet. Create one from the Tasks page to see summaries here.</p>
         </div>
@@ -240,7 +259,7 @@ export function ProjectOverviewSection({ tasks, projects, anchorDate }: Props) {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.04, duration: 0.3 }}
-                className="flex flex-col gap-3 rounded-xl border border-white/10 bg-linear-to-b from-white/[0.06] to-black/25 p-4 shadow-lg shadow-black/15"
+                className="flex flex-col gap-3 rounded-xl border border-white/10 bg-linear-to-b from-white/6 to-black/25 p-4 shadow-lg shadow-black/15"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">

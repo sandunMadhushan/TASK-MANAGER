@@ -198,18 +198,18 @@ export function TasksPage() {
 
       <section className="rounded-2xl border border-white/10 bg-white/4 p-3 backdrop-blur-md sm:p-4">
         <div className="grid gap-3 md:grid-cols-5">
-          <label className="relative block md:col-span-2">
-            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-              <Search className="size-4 text-muted-foreground" />
-            </span>
-            <Input
-              value={searchText}
-              onChange={(event) => updateSearchQuery(event.target.value)}
-              placeholder="Search by title, description, assignee..."
-              className="h-9 pl-10"
-              aria-label="Search tasks"
-            />
-          </label>
+          <div className="md:col-span-2">
+            <label className="relative block h-9">
+              <Input
+                value={searchText}
+                onChange={(event) => updateSearchQuery(event.target.value)}
+                placeholder="Search by title, description, assignee..."
+                className="h-full pl-10"
+                aria-label="Search tasks"
+              />
+              <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+            </label>
+          </div>
 
           <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3">
             <span className="text-xs text-muted-foreground">Status</span>
@@ -305,7 +305,7 @@ export function TasksPage() {
               }
             >
               <SelectTrigger
-                className="h-auto border-0 bg-transparent px-0 py-0 text-xs shadow-none focus-visible:ring-0"
+                className="h-auto border-0 bg-transparent px-1 py-0 text-xs shadow-none focus-visible:ring-0"
                 aria-label="Sort tasks"
               >
                 <SelectValue>{sortLabel[sortBy]}</SelectValue>
