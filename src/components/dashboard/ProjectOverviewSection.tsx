@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
 import { parseLocalDate } from "@/lib/format-due-date";
+import { useTaskStore } from "@/store/task-store";
 import type { Project } from "@/types/project";
 import type { Task } from "@/types/task";
 
@@ -179,6 +180,7 @@ type Props = {
 };
 
 export function ProjectOverviewSection({ tasks, projects, anchorDate }: Props) {
+  const setActiveProjectId = useTaskStore((s) => s.setActiveProjectId);
   const activeProjects = useMemo(
     () =>
       [...projects]
@@ -254,27 +256,34 @@ export function ProjectOverviewSection({ tasks, projects, anchorDate }: Props) {
             const open = todo + inProgress;
 
             return (
-              <motion.article
+              <motion.div
                 key={project.id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.04, duration: 0.3 }}
-                className="flex flex-col gap-3 rounded-xl border border-white/10 bg-linear-to-b from-white/6 to-black/25 p-4 shadow-lg shadow-black/15"
+                className="h-full"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-foreground">{project.name}</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      {list.length} task{list.length === 1 ? "" : "s"} · {open} open
-                    </p>
+                <Link
+                  to="/tasks"
+                  onClick={() => setActiveProjectId(project.id)}
+                  className="flex h-full flex-col gap-3 rounded-xl border border-white/10 bg-linear-to-b from-white/6 to-black/25 p-4 shadow-lg shadow-black/15 transition-colors hover:border-primary/45 hover:bg-white/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                  aria-label={`Open tasks for ${project.name}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">{project.name}</p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {list.length} task{list.length === 1 ? "" : "s"} · {open} open
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="shrink-0 text-[10px]">
+                      {list.length ? `${Math.round((done / list.length) * 100)}%` : "—"} done
+                    </Badge>
                   </div>
-                  <Badge variant="secondary" className="shrink-0 text-[10px]">
-                    {list.length ? `${Math.round((done / list.length) * 100)}%` : "—"} done
-                  </Badge>
-                </div>
-                <StatusStrip todo={todo} inProgress={inProgress} done={done} />
-                <MiniDueTimeline tasks={list} anchorDate={anchorDate} />
-              </motion.article>
+                  <StatusStrip todo={todo} inProgress={inProgress} done={done} />
+                  <MiniDueTimeline tasks={list} anchorDate={anchorDate} />
+                </Link>
+              </motion.div>
             );
           })}
         </div>
