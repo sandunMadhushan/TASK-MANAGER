@@ -199,12 +199,14 @@ export function TasksPage() {
       <section className="rounded-2xl border border-white/10 bg-white/4 p-3 backdrop-blur-md sm:p-4">
         <div className="grid gap-3 md:grid-cols-5">
           <label className="relative block md:col-span-2">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+              <Search className="size-4 text-muted-foreground" />
+            </span>
             <Input
               value={searchText}
               onChange={(event) => updateSearchQuery(event.target.value)}
               placeholder="Search by title, description, assignee..."
-              className="pl-9"
+              className="h-9 pl-10"
               aria-label="Search tasks"
             />
           </label>
@@ -216,7 +218,7 @@ export function TasksPage() {
               onValueChange={(value) => setStatusFilter(value as 'all' | TaskStatus)}
             >
               <SelectTrigger
-                className="h-9 w-full border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                className="h-9 w-full border-0 bg-transparent px-1 shadow-none focus-visible:ring-0"
                 aria-label="Filter by status"
               >
                 <SelectValue>{statusLabel[statusFilter]}</SelectValue>
@@ -245,7 +247,7 @@ export function TasksPage() {
               onValueChange={(value) => setActiveProjectId(value === '__all__' ? null : value)}
             >
               <SelectTrigger
-                className="h-9 w-full border-0 bg-transparent px-0 py-0 shadow-none focus-visible:ring-0"
+                className="h-9 w-full border-0 bg-transparent px-1 py-0 shadow-none focus-visible:ring-0"
                 aria-label="Filter by project"
               >
                 <SelectValue>{projectLabel}</SelectValue>
@@ -272,7 +274,7 @@ export function TasksPage() {
             <span className="text-xs text-muted-foreground">Assignee</span>
             <Select value={assigneeFilter} onValueChange={updateAssigneeFilter}>
               <SelectTrigger
-                className="h-9 w-full border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                className="h-9 w-full border-0 bg-transparent px-1 shadow-none focus-visible:ring-0"
                 aria-label="Filter by assignee"
               >
                 <SelectValue>{assigneeLabel}</SelectValue>
