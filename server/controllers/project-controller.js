@@ -17,12 +17,25 @@ function workspaceIdsForUser(req) {
   return [...new Set(list)]
 }
 
-function workspaceNameForUser(req, workspaceId) {
-  const ids = Array.isArray(req.user?.workspaceIds) ? req.user.workspaceIds.map(String) : []
-  const names = Array.isArray(req.user?.workspaceNames) ? req.user.workspaceNames : []
-  const idx = ids.indexOf(String(workspaceId ?? ''))
-  const name = idx >= 0 ? String(names[idx] ?? '').trim() : ''
-  return name || 'Workspace'
+function workspaceNameFromUsers(users, workspaceId) {
+  const target = String(workspaceId ?? '')
+  const owner = Array.isArray(users)
+    ? users.find((u) => String(u?.id ?? '') === target)
+    : null
+  const ownerName = String(owner?.name ?? '').trim()
+  if (ownerName) return ownerName
+
+  const membershipName = Array.isArray(users)
+    ? users
+        .flatMap((u) => {
+          const ids = Array.isArray(u?.workspaceIds) ? u.workspaceIds.map(String) : []
+          const names = Array.isArray(u?.workspaceNames) ? u.workspaceNames : []
+          const idx = ids.indexOf(target)
+          return idx >= 0 ? [String(names[idx] ?? '').trim()] : []
+        })
+        .find((name) => name)
+    : ''
+  return membershipName || 'Workspace'
 }
 
 /** Workspace root owner OR project creator may manage a project. */
@@ -80,7 +93,7 @@ export async function createProjectHandler(req, res, next) {
         projectId: project.id,
         projectName: project.name,
         workspaceId: requested,
-        workspaceName: workspaceNameForUser(req, requested),
+        workspaceName: workspaceNameFromUsers(workspaceUsers, requested),
         createdById: actorId,
         createdByName: actorName,
       })
@@ -129,7 +142,7 @@ export async function deleteProjectHandler(req, res, next) {
         projectId: String(existing.id ?? projectId),
         projectName: String(existing.name ?? 'Untitled project'),
         workspaceId: String(existing.workspaceId),
-        workspaceName: workspaceNameForUser(req, existing.workspaceId),
+        workspaceName: workspaceNameFromUsers(workspaceUsers, existing.workspaceId),
         deletedById: actorId,
         deletedByName: actorName,
       })

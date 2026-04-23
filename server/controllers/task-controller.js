@@ -7,7 +7,7 @@ import {
   updateTaskStatus,
 } from '../services/task-service.js'
 import { getProjectById } from '../services/project-service.js'
-import { getUserById, getUsersByIds } from '../services/user-service.js'
+import { getUserById, getUsers, getUsersByIds } from '../services/user-service.js'
 import {
   notifyTaskAssigned,
   notifyTaskCompleted,
@@ -20,7 +20,36 @@ function workspaceNameForUser(req, workspaceId) {
   const names = Array.isArray(req.user?.workspaceNames) ? req.user.workspaceNames : []
   const idx = ids.indexOf(String(workspaceId ?? ''))
   const name = idx >= 0 ? String(names[idx] ?? '').trim() : ''
-  return name || 'Workspace'
+  if (name) return name
+  return ''
+}
+
+function workspaceNameFromUsers(users, workspaceId) {
+  const target = String(workspaceId ?? '')
+  const owner = Array.isArray(users)
+    ? users.find((u) => String(u?.id ?? '') === target)
+    : null
+  const ownerName = String(owner?.name ?? '').trim()
+  if (ownerName) return ownerName
+
+  const membershipName = Array.isArray(users)
+    ? users
+        .flatMap((u) => {
+          const ids = Array.isArray(u?.workspaceIds) ? u.workspaceIds.map(String) : []
+          const names = Array.isArray(u?.workspaceNames) ? u.workspaceNames : []
+          const idx = ids.indexOf(target)
+          return idx >= 0 ? [String(names[idx] ?? '').trim()] : []
+        })
+        .find((n) => n)
+    : ''
+  return membershipName || 'Workspace'
+}
+
+async function resolveWorkspaceName(req, workspaceId) {
+  const fromSession = workspaceNameForUser(req, workspaceId)
+  if (fromSession) return fromSession
+  const users = await getUsers(String(workspaceId ?? ''))
+  return workspaceNameFromUsers(users, workspaceId)
 }
 
 function getTaskProjectContext(task, fallbackProject) {
@@ -95,12 +124,13 @@ export async function createTaskHandler(req, res, next) {
 
     const assignedUsers = getAssignedUsers(task)
     const context = getTaskProjectContext(task, project)
+    const workspaceName = await resolveWorkspaceName(req, context.workspaceId)
     await runNotificationSafely(() =>
       notifyTaskAssigned(task, assignedUsers, {
         projectId: context.projectId,
         projectName: context.projectName,
         workspaceId: context.workspaceId,
-        workspaceName: workspaceNameForUser(req, context.workspaceId),
+        workspaceName,
       })
     )
 
@@ -245,12 +275,13 @@ export async function updateTaskHandler(req, res, next) {
       const newlyAssigned = getAssignedUsers(task).filter((u) => !previousIds.has(u.id))
       if (newlyAssigned.length > 0) {
         const context = getTaskProjectContext(task)
+        const workspaceName = await resolveWorkspaceName(req, context.workspaceId)
         await runNotificationSafely(() =>
           notifyTaskAssigned(task, newlyAssigned, {
             projectId: context.projectId,
             projectName: context.projectName,
             workspaceId: context.workspaceId,
-            workspaceName: workspaceNameForUser(req, context.workspaceId),
+            workspaceName,
           })
         )
       }
