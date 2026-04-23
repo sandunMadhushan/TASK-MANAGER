@@ -397,8 +397,8 @@ export function ProjectsPage() {
         <div className="space-y-1">
           <h1 className="font-heading text-2xl font-semibold tracking-tight md:text-3xl">Projects</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Create and organize projects per workspace. Only the workspace owner can rename, move,
-            or delete projects; members can still use them for tasks.
+            Create and organize projects per workspace. The workspace owner and each project creator
+            can rename, move, or delete their projects.
           </p>
         </div>
         <Button className="shadow-lg shadow-primary/25" type="button" onClick={() => setCreateOpen(true)}>
@@ -415,7 +415,6 @@ export function ProjectsPage() {
       ) : (
         <div className="space-y-4">
           {groupedProjects.map((group) => {
-            const canManage = currentUser?.id === group.workspaceId
             return (
               <div
                 key={`proj-group-${group.workspaceId}`}
@@ -466,7 +465,7 @@ export function ProjectsPage() {
                           >
                             Tasks
                           </Link>
-                          {canManage ? (
+                          {currentUser?.id === group.workspaceId || currentUser?.id === project.createdBy ? (
                             <>
                               <Button
                                 type="button"

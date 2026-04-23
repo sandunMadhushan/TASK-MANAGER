@@ -15,9 +15,13 @@ function workspaceIdsForUser(req) {
   return [...new Set(list)]
 }
 
-/** Workspace “root” id: only this user may manage projects in that workspace (rename/delete/move). */
-function userOwnsWorkspaceRoot(req, workspaceId) {
-  return String(req.user?.id ?? '') === String(workspaceId ?? '')
+/** Workspace root owner OR project creator may manage a project. */
+function canManageProject(req, project) {
+  const actorId = String(req.user?.id ?? '')
+  const workspaceRootId = String(project?.workspaceId ?? '')
+  const createdById = String(project?.createdBy ?? '')
+  if (!actorId) return false
+  return actorId === workspaceRootId || actorId === createdById
 }
 
 export async function getProjectsHandler(req, res, next) {
@@ -81,8 +85,8 @@ export async function deleteProjectHandler(req, res, next) {
     if (!existing || !workspaceIdsForUser(req).includes(String(existing.workspaceId))) {
       return res.status(404).json({ message: 'Project not found.' })
     }
-    if (!userOwnsWorkspaceRoot(req, existing.workspaceId)) {
-      return res.status(403).json({ message: 'Only the workspace owner can delete projects.' })
+    if (!canManageProject(req, existing)) {
+      return res.status(403).json({ message: 'Only the workspace owner or project creator can delete this project.' })
     }
 
     const result = await deleteProjectIfAllowed(projectId)
@@ -110,8 +114,8 @@ export async function updateProjectHandler(req, res, next) {
     if (!existing || !workspaceIdsForUser(req).includes(String(existing.workspaceId))) {
       return res.status(404).json({ message: 'Project not found.' })
     }
-    if (!userOwnsWorkspaceRoot(req, existing.workspaceId)) {
-      return res.status(403).json({ message: 'Only the workspace owner can update projects.' })
+    if (!canManageProject(req, existing)) {
+      return res.status(403).json({ message: 'Only the workspace owner or project creator can update this project.' })
     }
 
     const name =
