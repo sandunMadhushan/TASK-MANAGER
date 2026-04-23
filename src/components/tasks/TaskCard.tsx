@@ -175,14 +175,16 @@ export function TaskCard({ task, index }: TaskCardProps) {
           </div>
         </CardContent>
 
-        <CardFooter className="flex-wrap items-center justify-between gap-2 border-white/10 bg-white/3 sm:flex-nowrap">
-          <div className="order-2 line-clamp-1 w-full text-xs text-muted-foreground sm:order-1 sm:max-w-[42%]">
+        <CardFooter className="flex-wrap items-center justify-between gap-2 border-white/10 bg-white/3 sm:flex-nowrap sm:items-start">
+          <div className="order-2 w-full text-xs text-muted-foreground sm:order-1 sm:flex-1 sm:pr-2">
             <span className="font-medium text-foreground/90">
               {resolvedAssignees.length > 1 ? 'Assignee emails: ' : 'Assignee email: '}
             </span>
-            {resolvedAssignees.length
-              ? resolvedAssignees.map((u) => u.email).join(', ')
-              : 'Not available'}
+            <span className="break-all">
+              {resolvedAssignees.length
+                ? resolvedAssignees.map((u) => u.email).join(', ')
+                : 'Not available'}
+            </span>
           </div>
           <div className="order-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground sm:order-2">
             {isUpdating || isDeleting ? (
