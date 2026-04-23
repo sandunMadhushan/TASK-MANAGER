@@ -29,8 +29,8 @@ function workspaceNameFromUsers(users, workspaceId) {
   const owner = Array.isArray(users)
     ? users.find((u) => String(u?.id ?? '') === target)
     : null
-  const ownerName = String(owner?.name ?? '').trim()
-  if (ownerName) return ownerName
+  const ownerWorkspaceName = String(owner?.workspaceName ?? '').trim()
+  if (ownerWorkspaceName) return ownerWorkspaceName
 
   const membershipName = Array.isArray(users)
     ? users
@@ -42,7 +42,10 @@ function workspaceNameFromUsers(users, workspaceId) {
         })
         .find((n) => n)
     : ''
-  return membershipName || 'Workspace'
+  if (membershipName) return membershipName
+
+  const ownerName = String(owner?.name ?? '').trim()
+  return ownerName || 'Workspace'
 }
 
 async function resolveWorkspaceName(req, workspaceId) {
