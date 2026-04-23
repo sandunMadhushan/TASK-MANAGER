@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  A modern, workspace-based task management app with a premium glassmorphism UI, secure authentication, profile management, team collaboration, and Novu-powered notifications.
+  A modern, workspace-based task and project management app with a premium glassmorphism UI, secure authentication, profile management, team collaboration, and Novu-powered notifications.
 </p>
 
 ## Features
@@ -17,11 +17,36 @@
 - Change password from Profile
 - Profile management (name, email, avatar)
 - Avatar upload with crop + zoom before saving
+- Project management with workspace ownership rules (create, rename, move, archive/delete)
 - Task CRUD with status management and assignee support
+- Project-scoped task organization (keep tasks separated by project)
+- Multi-project workflow support (users can work across multiple projects in the same workspace)
 - Team management (invite/edit/remove members from workspace — accounts are not deleted)
 - Real-time-ready Novu inbox bell and notifications page
 - Global search, filters, sorting, and polished dark glass UI
+- Dashboard project pulse cards with quick navigation to filtered project tasks
+- Clear assignee context in task cards (assignee names + labeled assignee email display)
+- Workspace-first wording updates across Team/Projects UI for clarity
 - **Desktop:** Tauri v2 app sharing the same React UI (release workflow builds Windows, macOS, and Linux artifacts)
+
+## What Changed Recently
+
+- Added dedicated **Projects** flow so work is grouped per project inside a workspace.
+- Added project filters and project-aware task views so users can focus on one project at a time.
+- Enabled quick jump from Dashboard project cards to the related project tasks.
+- Improved Dashboard summary and project pulse readability with clearer labels and helper text.
+- Updated Team and Projects wording from "Group" to **Workspace** where relevant.
+- Improved Tasks filter-bar spacing/alignment (search icon and select text positioning).
+- Clarified task card footer by labeling assignee emails explicitly.
+
+## User Flow (Quick Start)
+
+1. Sign up (or log in) to enter your workspace.
+2. Create one or more projects from the **Projects** page.
+3. Create tasks and assign each task to the relevant project.
+4. Use project filters on the **Tasks** page to focus on a single project.
+5. Switch projects anytime to work across multiple projects in the same workspace.
+6. Use the **Dashboard** project pulse cards to jump directly into project-specific tasks.
 
 ## Tech Stack
 
@@ -259,6 +284,13 @@ Default local base URL: `http://localhost:4000/api`. In production, use your dep
 - `PATCH /tasks/:taskId/status`
 - `DELETE /tasks/:taskId`
 
+### Projects
+
+- `GET /projects`
+- `POST /projects`
+- `PATCH /projects/:projectId`
+- `DELETE /projects/:projectId`
+
 ### Users
 
 - `GET /users`
@@ -278,6 +310,7 @@ Default local base URL: `http://localhost:4000/api`. In production, use your dep
 
 - Users only see users in their own workspace
 - Users only see tasks relevant to them (created by or assigned to them) within workspace
+- Projects are workspace-scoped; project operations are validated against workspace membership/ownership rules
 - Assignment validation is workspace-bound
 
 ## Deployment (AWS + Vercel + Novu + desktop)
