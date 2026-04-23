@@ -39,7 +39,7 @@ async function triggerForUsers({ workflowId, users, payload }) {
   )
 }
 
-export async function notifyTaskAssigned(task, users) {
+export async function notifyTaskAssigned(task, users, extraPayload = {}) {
   if (!env.novuWorkflowTaskAssigned) return
   await triggerForUsers({
     workflowId: env.novuWorkflowTaskAssigned,
@@ -50,6 +50,7 @@ export async function notifyTaskAssigned(task, users) {
       description: task.description,
       status: task.status,
       dueDate: task.dueDate,
+      ...extraPayload,
     },
   })
 }
@@ -119,6 +120,24 @@ export async function notifyTeamInviteJoined(inviteeUser, payload) {
   await triggerForUsers({
     workflowId: env.novuWorkflowTeamInviteJoined,
     users: [inviteeUser],
+    payload,
+  })
+}
+
+export async function notifyProjectCreated(workspaceUsers, payload) {
+  if (!env.novuWorkflowProjectCreated || !canSend(env.novuWorkflowProjectCreated)) return
+  await triggerForUsers({
+    workflowId: env.novuWorkflowProjectCreated,
+    users: workspaceUsers,
+    payload,
+  })
+}
+
+export async function notifyProjectDeleted(workspaceUsers, payload) {
+  if (!env.novuWorkflowProjectDeleted || !canSend(env.novuWorkflowProjectDeleted)) return
+  await triggerForUsers({
+    workflowId: env.novuWorkflowProjectDeleted,
+    users: workspaceUsers,
     payload,
   })
 }

@@ -15,6 +15,37 @@ import {
 
 const statusValues = new Set(['todo', 'in-progress', 'done'])
 
+function workspaceNameForUser(req, workspaceId) {
+  const ids = Array.isArray(req.user?.workspaceIds) ? req.user.workspaceIds.map(String) : []
+  const names = Array.isArray(req.user?.workspaceNames) ? req.user.workspaceNames : []
+  const idx = ids.indexOf(String(workspaceId ?? ''))
+  const name = idx >= 0 ? String(names[idx] ?? '').trim() : ''
+  return name || 'Workspace'
+}
+
+function getTaskProjectContext(task, fallbackProject) {
+  if (fallbackProject?.id) {
+    return {
+      projectId: String(fallbackProject.id),
+      projectName: String(fallbackProject.name ?? 'Uncategorized'),
+      workspaceId: String(fallbackProject.workspaceId ?? ''),
+    }
+  }
+  const raw = task?.projectId
+  if (raw && typeof raw === 'object') {
+    return {
+      projectId: String(raw.id ?? ''),
+      projectName: String(raw.name ?? 'Uncategorized'),
+      workspaceId: String(raw.workspaceId ?? task?.workspaceId ?? ''),
+    }
+  }
+  return {
+    projectId: String(raw ?? ''),
+    projectName: 'Uncategorized',
+    workspaceId: String(task?.workspaceId ?? ''),
+  }
+}
+
 export async function createTaskHandler(req, res, next) {
   try {
     const currentUserId = req.user?.id
@@ -63,7 +94,15 @@ export async function createTaskHandler(req, res, next) {
     })
 
     const assignedUsers = getAssignedUsers(task)
-    await runNotificationSafely(() => notifyTaskAssigned(task, assignedUsers))
+    const context = getTaskProjectContext(task, project)
+    await runNotificationSafely(() =>
+      notifyTaskAssigned(task, assignedUsers, {
+        projectId: context.projectId,
+        projectName: context.projectName,
+        workspaceId: context.workspaceId,
+        workspaceName: workspaceNameForUser(req, context.workspaceId),
+      })
+    )
 
     return res.status(201).json(task)
   } catch (error) {
@@ -205,7 +244,15 @@ export async function updateTaskHandler(req, res, next) {
       const previousIds = new Set(getAssignedUsers(previousTask).map((u) => u.id))
       const newlyAssigned = getAssignedUsers(task).filter((u) => !previousIds.has(u.id))
       if (newlyAssigned.length > 0) {
-        await runNotificationSafely(() => notifyTaskAssigned(task, newlyAssigned))
+        const context = getTaskProjectContext(task)
+        await runNotificationSafely(() =>
+          notifyTaskAssigned(task, newlyAssigned, {
+            projectId: context.projectId,
+            projectName: context.projectName,
+            workspaceId: context.workspaceId,
+            workspaceName: workspaceNameForUser(req, context.workspaceId),
+          })
+        )
       }
 
       if (previousTask.status !== 'done' && task.status === 'done') {

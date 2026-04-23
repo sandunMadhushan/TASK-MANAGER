@@ -50,6 +50,8 @@ export const env = {
   novuWorkflowTeamInviteAccepted: process.env.NOVU_WORKFLOW_TEAM_INVITE_ACCEPTED ?? '',
   novuWorkflowTeamInviteDeclined: process.env.NOVU_WORKFLOW_TEAM_INVITE_DECLINED ?? '',
   novuWorkflowTeamInviteJoined: process.env.NOVU_WORKFLOW_TEAM_INVITE_JOINED ?? '',
+  novuWorkflowProjectCreated: process.env.NOVU_WORKFLOW_PROJECT_CREATED ?? '',
+  novuWorkflowProjectDeleted: process.env.NOVU_WORKFLOW_PROJECT_DELETED ?? '',
   authJwtSecret: process.env.AUTH_JWT_SECRET ?? '',
   authJwtExpiresIn: process.env.AUTH_JWT_EXPIRES_IN ?? '7d',
   authDefaultPassword: process.env.AUTH_DEFAULT_PASSWORD ?? 'Pass@12345',

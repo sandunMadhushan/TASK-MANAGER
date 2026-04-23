@@ -224,6 +224,8 @@ For release checklist in this branch, follow the version bump -> tag push -> Git
 - `NOVU_WORKFLOW_TASK_COMPLETED` - task-completed notifications
 - `NOVU_WORKFLOW_DEADLINE_NEAR` - deadline reminders
 - `NOVU_WORKFLOW_PASSWORD_RESET` - forgot-password emails
+- `NOVU_WORKFLOW_PROJECT_CREATED` - project-created notification + email to all members in that workspace
+- `NOVU_WORKFLOW_PROJECT_DELETED` - project-deleted notification + email to all members in that workspace
 
 ## Authentication Flows
 

@@ -6,6 +6,8 @@ import {
   getProjectsForUser,
   updateProject,
 } from '../services/project-service.js'
+import { notifyProjectCreated, notifyProjectDeleted } from '../services/notification-service.js'
+import { getUsers } from '../services/user-service.js'
 
 const projectStatusValues = new Set(['active', 'archived'])
 
@@ -13,6 +15,14 @@ function workspaceIdsForUser(req) {
   const raw = req.user?.workspaceIds ?? [req.user?.workspaceId]
   const list = (Array.isArray(raw) ? raw : [raw]).map((id) => String(id)).filter(Boolean)
   return [...new Set(list)]
+}
+
+function workspaceNameForUser(req, workspaceId) {
+  const ids = Array.isArray(req.user?.workspaceIds) ? req.user.workspaceIds.map(String) : []
+  const names = Array.isArray(req.user?.workspaceNames) ? req.user.workspaceNames : []
+  const idx = ids.indexOf(String(workspaceId ?? ''))
+  const name = idx >= 0 ? String(names[idx] ?? '').trim() : ''
+  return name || 'Workspace'
 }
 
 /** Workspace root owner OR project creator may manage a project. */
@@ -61,6 +71,23 @@ export async function createProjectHandler(req, res, next) {
       workspaceId: requested,
       createdBy: actorId,
     })
+
+    // Best-effort notification fanout for everyone in the selected workspace.
+    try {
+      const workspaceUsers = await getUsers(requested)
+      const actorName = String(req.user?.name ?? '').trim() || 'A workspace member'
+      await notifyProjectCreated(workspaceUsers, {
+        projectId: project.id,
+        projectName: project.name,
+        workspaceId: requested,
+        workspaceName: workspaceNameForUser(req, requested),
+        createdById: actorId,
+        createdByName: actorName,
+      })
+    } catch (notifyError) {
+      console.error('[project-created-notify] failed to send workspace notification', notifyError)
+    }
+
     return res.status(201).json(project)
   } catch (error) {
     if (error?.code === 11000) {
@@ -89,13 +116,35 @@ export async function deleteProjectHandler(req, res, next) {
       return res.status(403).json({ message: 'Only the workspace owner or project creator can delete this project.' })
     }
 
+    const workspaceUsers = await getUsers(String(existing.workspaceId))
+    const actorName = String(req.user?.name ?? '').trim() || 'A workspace member'
+
     const result = await deleteProjectIfAllowed(projectId)
     if (!result.ok) {
       return res.status(result.statusCode).json({ message: result.message })
     }
+
+    await runProjectNotificationSafely(() =>
+      notifyProjectDeleted(workspaceUsers, {
+        projectId: String(existing.id ?? projectId),
+        projectName: String(existing.name ?? 'Untitled project'),
+        workspaceId: String(existing.workspaceId),
+        workspaceName: workspaceNameForUser(req, existing.workspaceId),
+        deletedById: actorId,
+        deletedByName: actorName,
+      })
+    )
     return res.status(200).json({ deleted: true })
   } catch (error) {
     return next(error)
+  }
+}
+
+async function runProjectNotificationSafely(notify) {
+  try {
+    await notify()
+  } catch (error) {
+    console.warn('Project notification dispatch failed:', error?.message ?? error)
   }
 }
 
