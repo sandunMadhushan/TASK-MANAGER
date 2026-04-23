@@ -56,7 +56,8 @@ export function ProjectsPage() {
       const sid = String(id)
       const raw = names[index]
       const normalized = raw !== undefined && raw !== null ? String(raw).trim() : ''
-      const hasRealName = normalized !== '' && normalized !== sid
+      const isLikelyObjectId = /^[a-f0-9]{24}$/i.test(normalized)
+      const hasRealName = normalized !== '' && normalized !== sid && !isLikelyObjectId
       const label =
         hasRealName
           ? normalized
@@ -245,7 +246,9 @@ export function ProjectsPage() {
                   onValueChange={(value) => setCreateWorkspaceId(value ?? '')}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select workspace" />
+                    <SelectValue placeholder="Select workspace">
+                      {workspaceOptions.find((o) => o.id === createWorkspaceId)?.label ?? 'Select workspace'}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent side="bottom" sideOffset={8} alignItemWithTrigger={false}>
                     {workspaceOptions.map((o) => (
@@ -303,7 +306,9 @@ export function ProjectsPage() {
                   disabled={!canChangeWorkspaceOnEdit}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    <SelectValue>
+                      {workspaceOptions.find((o) => o.id === editWorkspaceId)?.label ?? 'Select workspace'}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent side="bottom" sideOffset={8} alignItemWithTrigger={false}>
                     {workspaceOptions.map((o) => (
