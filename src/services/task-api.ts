@@ -323,6 +323,8 @@ export async function createProjectApi(input: {
   description?: string
   /** Workspace (team) this project belongs to; defaults to your primary workspace. */
   workspaceId?: string
+  planStartMonth: string
+  planEndMonth: string
 }): Promise<Project> {
   return request<Project>('/projects', {
     method: 'POST',
@@ -337,6 +339,8 @@ export async function updateProjectApi(
     description?: string
     status?: 'active' | 'archived'
     workspaceId?: string
+    planStartMonth?: string | null
+    planEndMonth?: string | null
   }
 ): Promise<Project> {
   return request<Project>(`/projects/${projectId}`, {

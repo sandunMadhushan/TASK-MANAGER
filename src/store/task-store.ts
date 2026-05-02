@@ -38,6 +38,8 @@ type TaskStore = {
     name: string
     description?: string
     workspaceId?: string
+    planStartMonth: string
+    planEndMonth: string
   }) => Promise<boolean>
   editProject: (
     id: string,
@@ -46,6 +48,8 @@ type TaskStore = {
       description?: string
       status?: 'active' | 'archived'
       workspaceId?: string
+      planStartMonth?: string | null
+      planEndMonth?: string | null
     }
   ) => Promise<boolean>
   deleteProject: (

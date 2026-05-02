@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion'
 import { FolderKanban, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -14,6 +15,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  addPlanMonths,
+  currentPlanMonth,
+  PLAN_MONTH_RE,
+} from '@/lib/project-plan-month'
 import { cn } from '@/lib/utils'
 import { fetchTasksApi } from '@/services/task-api'
 import { useAuthStore } from '@/store/auth-store'
@@ -21,7 +27,13 @@ import { useTaskStore } from '@/store/task-store'
 import type { Project } from '@/types/project'
 import type { Task } from '@/types/task'
 
+function defaultPlanEndMonth() {
+  return addPlanMonths(currentPlanMonth(), 5)
+}
+
 export function ProjectsPage() {
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const projects = useTaskStore((s) => s.projects)
   const addProject = useTaskStore((s) => s.addProject)
   const editProject = useTaskStore((s) => s.editProject)
@@ -33,10 +45,14 @@ export function ProjectsPage() {
   const [catalogTasks, setCatalogTasks] = useState<Task[]>([])
   const [createOpen, setCreateOpen] = useState(false)
   const [projectName, setProjectName] = useState('')
+  const [createPlanStart, setCreatePlanStart] = useState(currentPlanMonth)
+  const [createPlanEnd, setCreatePlanEnd] = useState(defaultPlanEndMonth)
   const [createWorkspaceId, setCreateWorkspaceId] = useState('')
   const [editOpen, setEditOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [editName, setEditName] = useState('')
+  const [editPlanStart, setEditPlanStart] = useState('')
+  const [editPlanEnd, setEditPlanEnd] = useState('')
   const [editWorkspaceId, setEditWorkspaceId] = useState('')
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
@@ -75,6 +91,12 @@ export function ProjectsPage() {
   useEffect(() => {
     void fetchProjects()
   }, [fetchProjects])
+
+  useEffect(() => {
+    if (searchParams.get('create') !== '1') return
+    setCreateOpen(true)
+    navigate('/projects', { replace: true })
+  }, [navigate, searchParams])
 
   useEffect(() => {
     refreshCatalog()
@@ -178,14 +200,31 @@ export function ProjectsPage() {
   async function handleCreateProject() {
     const name = projectName.trim()
     if (!name) return
+    const ps = createPlanStart.trim()
+    const pe = createPlanEnd.trim()
+    if (!PLAN_MONTH_RE.test(ps) || !PLAN_MONTH_RE.test(pe)) {
+      toast.error('Pick a valid start and close month.')
+      return
+    }
+    if (ps > pe) {
+      toast.error('Start month must be on or before the estimated close month.')
+      return
+    }
     const ws =
       workspaceOptions.find((o) => o.id === createWorkspaceId)?.id ??
       workspaceOptions.find((o) => o.id === defaultWorkspaceId)?.id ??
       workspaceOptions[0]?.id
-    const ok = await addProject({ name, workspaceId: workspaceOptions.length > 1 ? ws : undefined })
+    const ok = await addProject({
+      name,
+      workspaceId: workspaceOptions.length > 1 ? ws : undefined,
+      planStartMonth: ps,
+      planEndMonth: pe,
+    })
     if (!ok) return
     setCreateOpen(false)
     setProjectName('')
+    setCreatePlanStart(currentPlanMonth())
+    setCreatePlanEnd(defaultPlanEndMonth())
     setCreateWorkspaceId(defaultWorkspaceId)
     void fetchProjects()
     refreshCatalog()
@@ -194,6 +233,8 @@ export function ProjectsPage() {
   function openEditProject(project: Project) {
     setEditingProject(project)
     setEditName(project.name)
+    setEditPlanStart(project.planStartMonth ?? '')
+    setEditPlanEnd(project.planEndMonth ?? '')
     setEditWorkspaceId(String(project.workspaceId))
     setEditOpen(true)
   }
@@ -202,9 +243,35 @@ export function ProjectsPage() {
     if (!editingProject) return
     const name = editName.trim()
     if (!name) return
-    const payload: { name: string; workspaceId?: string } = { name }
+    const payload: {
+      name: string
+      workspaceId?: string
+      planStartMonth?: string | null
+      planEndMonth?: string | null
+    } = { name }
     if (editWorkspaceId && editWorkspaceId !== String(editingProject.workspaceId)) {
       payload.workspaceId = editWorkspaceId
+    }
+    const ps = editPlanStart.trim()
+    const pe = editPlanEnd.trim()
+    const hadPlan = Boolean(editingProject.planStartMonth && editingProject.planEndMonth)
+    if (ps === '' && pe === '') {
+      if (hadPlan) {
+        payload.planStartMonth = null
+        payload.planEndMonth = null
+      }
+    } else if (ps === '' || pe === '') {
+      toast.error('Set both start and estimated close, or clear both.')
+      return
+    } else if (!PLAN_MONTH_RE.test(ps) || !PLAN_MONTH_RE.test(pe)) {
+      toast.error('Pick a valid start and close month, or clear both.')
+      return
+    } else if (ps > pe) {
+      toast.error('Start month must be on or before the estimated close month.')
+      return
+    } else {
+      payload.planStartMonth = ps
+      payload.planEndMonth = pe
     }
     const ok = await editProject(editingProject.id, payload)
     if (!ok) return
@@ -260,6 +327,26 @@ export function ProjectsPage() {
                 </Select>
               </div>
             ) : null}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">Project starts</p>
+                <Input
+                  type="month"
+                  value={createPlanStart}
+                  onChange={(e) => setCreatePlanStart(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">Estimated close</p>
+                <Input
+                  type="month"
+                  value={createPlanEnd}
+                  onChange={(e) => setCreatePlanEnd(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
                 Cancel
@@ -326,6 +413,29 @@ export function ProjectsPage() {
                 ) : null}
               </div>
             ) : null}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">Project starts</p>
+                <Input
+                  type="month"
+                  value={editPlanStart}
+                  onChange={(e) => setEditPlanStart(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">Estimated close</p>
+                <Input
+                  type="month"
+                  value={editPlanEnd}
+                  onChange={(e) => setEditPlanEnd(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Clear both months to remove the schedule from the dashboard Gantt.
+            </p>
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
                 Cancel

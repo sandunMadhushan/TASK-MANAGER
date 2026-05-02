@@ -11,6 +11,37 @@ import { getUsers } from '../services/user-service.js'
 
 const projectStatusValues = new Set(['active', 'archived'])
 
+const PLAN_MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/
+
+function readPlanMonthFromBody(raw) {
+  if (raw === undefined) return { mode: 'omit' }
+  if (raw === null || raw === '') return { mode: 'clear' }
+  const s = String(raw).trim()
+  if (!PLAN_MONTH_RE.test(s)) return { mode: 'invalid' }
+  return { mode: 'set', value: s }
+}
+
+function readRequiredPlanMonths(body) {
+  const start = readPlanMonthFromBody(body?.planStartMonth)
+  const end = readPlanMonthFromBody(body?.planEndMonth)
+  if (start.mode === 'omit' || end.mode === 'omit') {
+    return { ok: false, message: 'Project start month and estimated close month are required.' }
+  }
+  if (start.mode === 'clear' || end.mode === 'clear') {
+    return { ok: false, message: 'Project start month and estimated close month are required.' }
+  }
+  if (start.mode === 'invalid' || end.mode === 'invalid') {
+    return { ok: false, message: 'Use a valid calendar month (YYYY-MM) for schedule fields.' }
+  }
+  if (start.value > end.value) {
+    return {
+      ok: false,
+      message: 'Start month must be the same as or before the estimated close month.',
+    }
+  }
+  return { ok: true, planStartMonth: start.value, planEndMonth: end.value }
+}
+
 function workspaceIdsForUser(req) {
   const raw = req.user?.workspaceIds ?? [req.user?.workspaceId]
   const list = (Array.isArray(raw) ? raw : [raw]).map((id) => String(id)).filter(Boolean)
@@ -81,11 +112,18 @@ export async function createProjectHandler(req, res, next) {
       return res.status(400).json({ message: 'Project name is required.' })
     }
 
+    const plan = readRequiredPlanMonths(req.body)
+    if (!plan.ok) {
+      return res.status(400).json({ message: plan.message })
+    }
+
     const project = await createProject({
       name,
       description,
       workspaceId: requested,
       createdBy: actorId,
+      planStartMonth: plan.planStartMonth,
+      planEndMonth: plan.planEndMonth,
     })
 
     // Best-effort notification fanout for everyone in the selected workspace.
@@ -213,6 +251,45 @@ export async function updateProjectHandler(req, res, next) {
         }
       }
       payload.workspaceId = newWorkspaceRaw
+    }
+
+    if (req.body?.planStartMonth !== undefined || req.body?.planEndMonth !== undefined) {
+      const s = readPlanMonthFromBody(req.body?.planStartMonth)
+      const e = readPlanMonthFromBody(req.body?.planEndMonth)
+      if (s.mode === 'invalid' || e.mode === 'invalid') {
+        return res.status(400).json({ message: 'Use a valid calendar month (YYYY-MM) for schedule fields.' })
+      }
+      const nextStart =
+        s.mode === 'omit'
+          ? String(existing.planStartMonth ?? '').trim()
+          : s.mode === 'clear'
+            ? ''
+            : s.value
+      const nextEnd =
+        e.mode === 'omit'
+          ? String(existing.planEndMonth ?? '').trim()
+          : e.mode === 'clear'
+            ? ''
+            : e.value
+      const hasStart = nextStart !== ''
+      const hasEnd = nextEnd !== ''
+      if (hasStart !== hasEnd) {
+        return res.status(400).json({
+          message: 'Set both start month and estimated close month, or clear both.',
+        })
+      }
+      if (hasStart && hasEnd) {
+        if (nextStart > nextEnd) {
+          return res.status(400).json({
+            message: 'Start month must be the same as or before the estimated close month.',
+          })
+        }
+        payload.planStartMonth = nextStart
+        payload.planEndMonth = nextEnd
+      } else {
+        payload.planStartMonth = null
+        payload.planEndMonth = null
+      }
     }
 
     const project = await updateProject(projectId, payload)

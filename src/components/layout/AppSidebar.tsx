@@ -121,7 +121,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             </NavLink>
             {isWorkspaceOwner ? (
               <NavLink
-                to="/projects"
+                to="/projects?create=1"
                 onClick={onNavigate}
                 className={cn(
                   'inline-flex w-full items-center gap-2 rounded-lg border border-white/10 bg-white/6 px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-white/10'

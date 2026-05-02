@@ -34,6 +34,18 @@ const projectSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    /** `YYYY-MM` — first month of the planned project window (from month picker). */
+    planStartMonth: {
+      type: String,
+      trim: true,
+      maxlength: 7,
+    },
+    /** `YYYY-MM` — last month of the planned project window (estimated close). */
+    planEndMonth: {
+      type: String,
+      trim: true,
+      maxlength: 7,
+    },
   },
   {
     timestamps: { createdAt: true, updatedAt: true },

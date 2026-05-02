@@ -27,18 +27,42 @@ export async function createProject(payload) {
     workspaceId: payload.workspaceId,
     createdBy: payload.createdBy,
     status: 'active',
+    planStartMonth: payload.planStartMonth,
+    planEndMonth: payload.planEndMonth,
   })
   return row.toJSON()
 }
 
 export async function updateProject(projectId, payload) {
-  const update = {}
-  if (payload.name !== undefined) update.name = payload.name
-  if (payload.description !== undefined) update.description = payload.description
-  if (payload.status !== undefined) update.status = payload.status
-  if (payload.workspaceId !== undefined) update.workspaceId = payload.workspaceId
+  const $set = {}
+  const $unset = {}
+  if (payload.name !== undefined) $set.name = payload.name
+  if (payload.description !== undefined) $set.description = payload.description
+  if (payload.status !== undefined) $set.status = payload.status
+  if (payload.workspaceId !== undefined) $set.workspaceId = payload.workspaceId
+  if (payload.planStartMonth !== undefined) {
+    if (payload.planStartMonth === null || payload.planStartMonth === '') {
+      $unset.planStartMonth = 1
+    } else {
+      $set.planStartMonth = payload.planStartMonth
+    }
+  }
+  if (payload.planEndMonth !== undefined) {
+    if (payload.planEndMonth === null || payload.planEndMonth === '') {
+      $unset.planEndMonth = 1
+    } else {
+      $set.planEndMonth = payload.planEndMonth
+    }
+  }
 
-  const row = await ProjectModel.findByIdAndUpdate(projectId, update, {
+  const updateDoc = {}
+  if (Object.keys($set).length) updateDoc.$set = $set
+  if (Object.keys($unset).length) updateDoc.$unset = $unset
+  if (!Object.keys(updateDoc).length) {
+    return getProjectById(projectId)
+  }
+
+  const row = await ProjectModel.findByIdAndUpdate(projectId, updateDoc, {
     new: true,
     runValidators: true,
   })
