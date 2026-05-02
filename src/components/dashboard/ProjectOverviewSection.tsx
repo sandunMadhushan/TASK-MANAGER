@@ -194,6 +194,25 @@ const GANTT_BAR_COLORS = [
   "rgb(94 234 212 / 0.9)",
 ];
 
+const AXIS_H_PX = 26;
+const ROW_H = 40;
+
+/** First of each calendar month from `start` through `end` (inclusive of months touched). */
+function listMonthStartsBetween(start: Date, end: Date): Date[] {
+  const out: Date[] = [];
+  const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+  const limit = new Date(end.getFullYear(), end.getMonth(), 1);
+  while (cur.getTime() <= limit.getTime()) {
+    out.push(new Date(cur));
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  return out;
+}
+
+function axisMonthLabel(d: Date): string {
+  return d.toLocaleString(undefined, { month: "short", year: "2-digit" });
+}
+
 function ProjectScheduleGantt({
   projects,
   anchorDate,
@@ -230,6 +249,13 @@ function ProjectScheduleGantt({
     return { domainStart: d0, domainEnd: d1, totalMs, todayPct };
   }, [anchorDate, rows]);
 
+  const monthTicks = useMemo(() => {
+    if (!domainStart || !domainEnd) return [];
+    return listMonthStartsBetween(domainStart, domainEnd);
+  }, [domainStart, domainEnd]);
+
+  const pctAt = (tMs: number) => ((tMs - domainStart!.getTime()) / totalMs) * 100;
+
   if (rows.length === 0 || !domainStart || !domainEnd) {
     return (
       <div className="rounded-xl border border-dashed border-white/12 bg-black/20 px-4 py-6 text-center">
@@ -241,49 +267,121 @@ function ProjectScheduleGantt({
     );
   }
 
+  const rangeLabel = `${formatPlanMonthLabel(rows.reduce((a, r) => (r.start < a ? r.start : a), rows[0].start))} — ${formatPlanMonthLabel(rows.reduce((a, r) => (r.end > a ? r.end : a), rows[0].end))}`;
+  const todayX = todayPct ?? 0;
+
   return (
     <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-semibold tracking-tight text-foreground">Schedule (Gantt)</h3>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            {formatPlanMonthLabel(rows.reduce((a, r) => (r.start < a ? r.start : a), rows[0].start))}{" "}
-            — {formatPlanMonthLabel(rows.reduce((a, r) => (r.end > a ? r.end : a), rows[0].end))}
-          </p>
-        </div>
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold tracking-tight text-foreground">Project timeline</h3>
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          Bars show each project from its <span className="text-foreground/90">start month</span> through its{" "}
+          <span className="text-foreground/90">estimated close month</span>. Vertical lines mark calendar months; the
+          bright line is today.
+        </p>
+        <p className="text-[10px] text-muted-foreground/90">Chart range: {rangeLabel}</p>
       </div>
-      <div className="relative rounded-md border border-white/10 bg-black/30 px-2 py-3">
+
+      <div className="flex gap-3 sm:gap-4">
         <div
-          className="pointer-events-none absolute bottom-2 top-8 z-[1] w-px bg-primary/80"
-          style={{ left: `calc(0.5rem + (100% - 1rem) * ${todayPct! / 100})` }}
-          title="Today"
-        />
-        <div className="space-y-2.5">
-          {rows.map((r, i) => {
-            const t0 = monthStartDate(r.start).getTime();
-            const t1 = monthEndDate(r.end).getTime();
-            const left = ((t0 - domainStart.getTime()) / totalMs) * 100;
-            const width = ((t1 - t0) / totalMs) * 100;
-            const bg = GANTT_BAR_COLORS[i % GANTT_BAR_COLORS.length];
-            return (
-              <div key={r.id} className="grid grid-cols-[minmax(0,7.5rem)_1fr] items-center gap-2 sm:grid-cols-[minmax(0,10rem)_1fr]">
-                <p className="truncate text-[11px] font-medium text-foreground" title={r.name}>
-                  {r.name}
-                </p>
-                <div className="relative h-6 rounded bg-white/5">
-                  <div
-                    className="absolute inset-y-1 rounded-sm shadow-sm ring-1 ring-white/10"
-                    style={{
-                      left: `${Math.max(0, Math.min(100, left))}%`,
-                      width: `${Math.max(0.5, Math.min(100, width))}%`,
-                      backgroundColor: bg,
-                    }}
-                    title={`${formatPlanMonthLabel(r.start)} → ${formatPlanMonthLabel(r.end)}`}
-                  />
+          className="flex w-[6.5rem] shrink-0 flex-col sm:w-[8.5rem]"
+          style={{ paddingTop: AXIS_H_PX }}
+        >
+          {rows.map((r) => (
+            <div
+              key={`label-${r.id}`}
+              className="flex flex-col justify-center border-b border-white/5 py-1.5"
+              style={{ minHeight: ROW_H }}
+            >
+              <p className="truncate text-[11px] font-medium text-foreground" title={r.name}>
+                {r.name}
+              </p>
+              <p className="truncate text-[10px] text-muted-foreground">
+                {formatPlanMonthLabel(r.start)} → {formatPlanMonthLabel(r.end)}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="relative min-w-0 flex-1 overflow-hidden rounded-md border border-white/10 bg-black/35">
+          {/* Month grid + today (behind bars) */}
+          <div
+            className="pointer-events-none absolute z-0 bg-white/[0.03]"
+            style={{ top: AXIS_H_PX, left: 0, right: 0, bottom: 0 }}
+          >
+            {monthTicks.map((d) => {
+              const left = pctAt(d.getTime());
+              if (left < 0 || left > 100) return null;
+              return (
+                <div
+                  key={d.toISOString()}
+                  className="absolute top-0 bottom-0 w-px bg-white/12"
+                  style={{ left: `${left}%` }}
+                />
+              );
+            })}
+          </div>
+          <div
+            className="pointer-events-none absolute inset-y-0 top-0 z-[2] w-px bg-primary shadow-[0_0_6px_rgb(139_92_246/0.55)]"
+            style={{ left: `${todayX}%` }}
+            title="Today"
+          />
+
+          {/* Month labels */}
+          <div
+            className="relative z-[1] border-b border-white/10 bg-black/40 px-1"
+            style={{ height: AXIS_H_PX }}
+          >
+            {monthTicks.map((d) => {
+              const left = pctAt(d.getTime());
+              if (left < -2 || left > 102) return null;
+              return (
+                <span
+                  key={`lab-${d.toISOString()}`}
+                  className="absolute top-1 max-w-[3.5rem] truncate text-[10px] font-medium tabular-nums text-muted-foreground"
+                  style={{ left: `${left}%`, transform: "translateX(2px)" }}
+                >
+                  {axisMonthLabel(d)}
+                </span>
+              );
+            })}
+            <span
+              className="absolute bottom-0.5 text-[9px] font-medium uppercase tracking-wide text-primary drop-shadow-sm"
+              style={{ left: `${todayX}%`, transform: "translateX(-50%)" }}
+            >
+              Today
+            </span>
+          </div>
+
+          {/* Bars */}
+          <div className="relative z-[1]">
+            {rows.map((r, i) => {
+              const t0 = monthStartDate(r.start).getTime();
+              const t1 = monthEndDate(r.end).getTime();
+              const left = pctAt(t0);
+              const width = ((t1 - t0) / totalMs) * 100;
+              const bg = GANTT_BAR_COLORS[i % GANTT_BAR_COLORS.length];
+              return (
+                <div
+                  key={r.id}
+                  className="flex items-center border-b border-white/5 px-2 py-1.5 last:border-b-0"
+                  style={{ minHeight: ROW_H }}
+                >
+                  <div className="relative h-7 w-full rounded-md bg-white/[0.06]">
+                    <div
+                      className="absolute inset-y-1 rounded-md shadow-sm ring-1 ring-white/15"
+                      style={{
+                        left: `${Math.max(0, Math.min(100, left))}%`,
+                        width: `${Math.max(0.8, Math.min(100, width))}%`,
+                        backgroundColor: bg,
+                      }}
+                      title={`${formatPlanMonthLabel(r.start)} → ${formatPlanMonthLabel(r.end)}`}
+                    />
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
