@@ -1,13 +1,17 @@
 import { motion } from 'framer-motion'
 import { BellRing, Loader2, RefreshCw } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { NOVU_NOTIFICATIONS_UPDATED_EVENT } from '@/lib/novu-events'
+import {
+  NOVU_NOTIFICATIONS_UPDATED_EVENT,
+  cacheNovuInboxUnread,
+  readCachedNovuInboxUnread,
+} from '@/lib/novu-events'
 import {
   acceptTeamInviteApi,
   declineTeamInviteApi,
@@ -28,6 +32,8 @@ export function NotificationsPage() {
   const [isMarking, setIsMarking] = useState(false)
   const [inviteActionId, setInviteActionId] = useState<string | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
+  /** Same source as the Novu `<Inbox />` bell (`renderBell` → emitNovuNotificationsUpdated). API unread-count can disagree with inbox. */
+  const inboxUnreadRef = useRef<number | null>(null)
   const [notifications, setNotifications] = useState<NotificationFeedItem[]>([])
   const [teamInvites, setTeamInvites] = useState<TeamInviteItem[]>([])
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
@@ -37,18 +43,24 @@ export function NotificationsPage() {
 
   const subscriberId = useMemo(() => currentUser?.id ?? null, [currentUser])
 
-  async function loadData(options?: { quiet?: boolean; skipLoading?: boolean }) {
+  async function loadData(options?: { quiet?: boolean; skipLoading?: boolean; skipUnreadFetch?: boolean }) {
     if (!subscriberId) return
     if (!options?.skipLoading) {
       setIsLoading(true)
     }
     try {
-      const [feed, unread] = await Promise.all([
-        fetchNotificationFeedApi(subscriberId, { limit: 12 }),
-        fetchUnreadNotificationCountApi(subscriberId),
-      ])
+      const skipUnread = options?.skipUnreadFetch === true
+      const feed = await fetchNotificationFeedApi(subscriberId, { limit: 12 })
       setNotifications(feed)
-      setUnreadCount(unread)
+
+      if (!skipUnread) {
+        const apiUnread = await fetchUnreadNotificationCountApi(subscriberId)
+        const fromInbox =
+          inboxUnreadRef.current !== null
+            ? inboxUnreadRef.current
+            : readCachedNovuInboxUnread(subscriberId)
+        setUnreadCount(fromInbox !== null ? fromInbox : apiUnread)
+      }
       const invites = await fetchTeamInvitesApi()
       setTeamInvites(invites)
 
@@ -88,6 +100,11 @@ export function NotificationsPage() {
   }
 
   useEffect(() => {
+    const cached = subscriberId ? readCachedNovuInboxUnread(subscriberId) : null
+    inboxUnreadRef.current = cached
+    if (cached !== null) {
+      setUnreadCount(cached)
+    }
     void loadData()
   }, [subscriberId])
 
@@ -114,7 +131,11 @@ export function NotificationsPage() {
     const onNovuUpdated = (event: Event) => {
       const custom = event as CustomEvent<{ subscriberId?: string; unreadCount?: number }>
       if (custom.detail?.subscriberId !== subscriberId) return
-      void loadData({ quiet: true, skipLoading: true })
+      if (typeof custom.detail.unreadCount === 'number') {
+        inboxUnreadRef.current = Math.max(0, custom.detail.unreadCount)
+        setUnreadCount(inboxUnreadRef.current)
+      }
+      void loadData({ quiet: true, skipLoading: true, skipUnreadFetch: true })
     }
     window.addEventListener(NOVU_NOTIFICATIONS_UPDATED_EVENT, onNovuUpdated as EventListener)
     return () => {
@@ -127,7 +148,10 @@ export function NotificationsPage() {
     setIsMarking(true)
     try {
       await markAllNotificationsReadApi(subscriberId)
-      await loadData()
+      inboxUnreadRef.current = 0
+      cacheNovuInboxUnread(subscriberId, 0)
+      setUnreadCount(0)
+      await loadData({ skipUnreadFetch: true })
       toast.success('Marked all notifications as read')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to mark all as read.'
