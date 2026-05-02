@@ -223,7 +223,7 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
             </Field>
 
             <Field>
-              <FieldLabel>Assign users (optional)</FieldLabel>
+              <FieldLabel>Assign users</FieldLabel>
               <FieldContent>
                 <div className="space-y-2 rounded-lg border border-white/10 bg-white/4 p-3">
                   {isUsersLoading ? (

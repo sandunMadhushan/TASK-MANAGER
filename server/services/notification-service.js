@@ -181,16 +181,47 @@ export async function sendDeadlineNearReminders(hoursAhead = 24) {
   return { scanned: tasks.length, triggered }
 }
 
+/**
+ * Unread count for the same Inbox channel as {@link getNotificationFeed} and the Novu `<Inbox />` bell.
+ * The legacy `/subscribers/.../notifications/feed` `totalCount` does not match the new inbox model (often stuck near 0–1).
+ */
 export async function getUnreadNotificationCount(subscriberId) {
-  if (!env.novuSecretKey || !subscriberId) return 0
+  if (!subscriberId) return 0
+
+  if (env.novuApplicationIdentifier) {
+    try {
+      const token = await createInboxSessionToken(subscriberId)
+      const url = new URL('/v1/inbox/notifications/count', novuRestBaseUrl)
+      url.searchParams.set('read', 'false')
+      url.searchParams.set('archived', 'false')
+      url.searchParams.set('snoozed', 'false')
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'novu-api-version': '2024-06-26',
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const body = await response.json()
+        const count = body?.data?.count
+        if (typeof count === 'number' && count >= 0) return count
+      }
+    } catch (error) {
+      console.warn('[notifications] inbox unread count failed:', error?.message ?? error)
+    }
+  }
+
+  if (!env.novuSecretKey) return 0
 
   const url = new URL(
-    `/v1/subscribers/${encodeURIComponent(subscriberId)}/notifications/feed`,
+    `/v1/subscribers/${encodeURIComponent(subscriberId)}/notifications/unseen`,
     novuRestBaseUrl
   )
-  url.searchParams.set('page', '0')
-  url.searchParams.set('limit', '1')
-  url.searchParams.set('read', 'false')
+  url.searchParams.set('seen', 'false')
+  url.searchParams.set('limit', '10000')
 
   const response = await fetch(url.toString(), {
     headers: {
@@ -205,8 +236,8 @@ export async function getUnreadNotificationCount(subscriberId) {
   }
 
   const body = await response.json()
-  const totalCount = body?.totalCount
-  return typeof totalCount === 'number' && totalCount >= 0 ? totalCount : 0
+  if (typeof body?.count === 'number' && body.count >= 0) return body.count
+  return 0
 }
 
 async function createInboxSessionToken(subscriberId) {
