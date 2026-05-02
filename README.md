@@ -24,7 +24,7 @@
 - Team management (invite/edit/remove members from workspace — accounts are not deleted)
 - Real-time-ready Novu inbox bell and notifications page
 - Global search, filters, sorting, and polished dark glass UI
-- Dashboard project pulse cards with quick navigation to filtered project tasks
+- **Dashboard project overview:** per-project cards with quick links to filtered tasks, a **schedule Gantt** (plan start / estimated close months), and a **next deadlines** list (open tasks with due dates over a 14-day horizon)
 - Clear assignee context in task cards (assignee names + labeled assignee email display)
 - Workspace-first wording updates across Team/Projects UI for clarity
 - **Desktop:** Tauri v2 app sharing the same React UI (release workflow builds Windows, macOS, and Linux artifacts)
@@ -34,7 +34,9 @@
 - Added dedicated **Projects** flow so work is grouped per project inside a workspace.
 - Added project filters and project-aware task views so users can focus on one project at a time.
 - Enabled quick jump from Dashboard project cards to the related project tasks.
-- Improved Dashboard summary and project pulse readability with clearer labels and helper text.
+- **Dashboard Gantt:** projects can store **`planStartMonth`** and **`planEndMonth`** (`YYYY-MM`, same as HTML month inputs); the dashboard draws a horizontal timeline bar per active project. Narrow viewports scroll horizontally; clear both months on a project to hide it from the chart.
+- **Next deadlines** on the dashboard lists up to five upcoming open tasks (with relative status chips) instead of an abstract strip.
+- Improved Dashboard summary readability with clearer labels and helper text.
 - Updated Team and Projects wording from "Group" to **Workspace** where relevant.
 - Improved Tasks filter-bar spacing/alignment (search icon and select text positioning).
 - Clarified task card footer by labeling assignee emails explicitly.
@@ -46,7 +48,14 @@
 3. Create tasks and assign each task to the relevant project.
 4. Use project filters on the **Tasks** page to focus on a single project.
 5. Switch projects anytime to work across multiple projects in the same workspace.
-6. Use the **Dashboard** project pulse cards to jump directly into project-specific tasks.
+6. Use the **Dashboard** project cards to jump into project-specific tasks.
+7. Optional: on **Projects**, set **Plan start** and **Estimated close** (month pickers) for a project so it appears on the **Dashboard** schedule Gantt alongside **Next deadlines** for tasks in that project.
+
+### Dashboard: project schedule (Gantt)
+
+- **Data:** Each project may have `planStartMonth` and `planEndMonth` (strings `YYYY-MM`). They are created/updated via the Projects UI and stored on the project document in MongoDB.
+- **UI:** `ProjectOverviewSection` on the Dashboard renders one row per non-archived project that has both months set; bars span from the start month through the end month on a shared axis (with grid and labels). Tasks for that project still use normal **due dates**; the Gantt is **plan-level**, not per-task scheduling.
+- **Code:** Timeline math and labels live in `src/lib/project-plan-month.ts`; the chart is implemented in `src/components/dashboard/ProjectOverviewSection.tsx` (`ProjectScheduleGantt`).
 
 ## Tech Stack
 
@@ -289,8 +298,8 @@ Default local base URL: `http://localhost:4000/api`. In production, use your dep
 ### Projects
 
 - `GET /projects`
-- `POST /projects`
-- `PATCH /projects/:projectId`
+- `POST /projects` — optional body fields `planStartMonth` / `planEndMonth` (`YYYY-MM` or omitted)
+- `PATCH /projects/:projectId` — may include `planStartMonth` / `planEndMonth` (set to `null` or empty to clear)
 - `DELETE /projects/:projectId`
 
 ### Users
