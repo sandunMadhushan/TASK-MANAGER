@@ -181,9 +181,40 @@ export async function sendDeadlineNearReminders(hoursAhead = 24) {
   return { scanned: tasks.length, triggered }
 }
 
+function pickNonNegativeCount(body) {
+  if (!body || typeof body !== 'object') return null
+  const c =
+    body?.data?.count ??
+    body?.count ??
+    body?.data?.totalCount ??
+    body?.totalCount
+  return typeof c === 'number' && c >= 0 ? c : null
+}
+
+/** Legacy feed `totalCount` (often low vs Inbox UI, but safe fallback when newer APIs fail). */
+async function getUnreadFromSubscriberFeedTotalCount(subscriberId) {
+  if (!env.novuSecretKey || !subscriberId) return null
+  const url = new URL(
+    `/v1/subscribers/${encodeURIComponent(subscriberId)}/notifications/feed`,
+    novuRestBaseUrl
+  )
+  url.searchParams.set('page', '0')
+  url.searchParams.set('limit', '1')
+  url.searchParams.set('read', 'false')
+  const response = await fetch(url.toString(), {
+    headers: {
+      Authorization: `ApiKey ${env.novuSecretKey}`,
+      'Content-Type': 'application/json',
+    },
+  })
+  if (!response.ok) return null
+  const body = await response.json()
+  return pickNonNegativeCount(body)
+}
+
 /**
- * Unread count for the same Inbox channel as {@link getNotificationFeed} and the Novu `<Inbox />` bell.
- * The legacy `/subscribers/.../notifications/feed` `totalCount` does not match the new inbox model (often stuck near 0–1).
+ * Unread count aligned with Inbox where possible. Never throws — Novu versions / self-hosts differ;
+ * we chain fallbacks so `/api/notifications/unread-count` stays 200.
  */
 export async function getUnreadNotificationCount(subscriberId) {
   if (!subscriberId) return 0
@@ -206,37 +237,56 @@ export async function getUnreadNotificationCount(subscriberId) {
 
       if (response.ok) {
         const body = await response.json()
-        const count = body?.data?.count
-        if (typeof count === 'number' && count >= 0) return count
+        const count = pickNonNegativeCount(body)
+        if (count !== null) return count
       }
     } catch (error) {
-      console.warn('[notifications] inbox unread count failed:', error?.message ?? error)
+      console.warn('[notifications] inbox /notifications/count failed:', error?.message ?? error)
     }
   }
 
-  if (!env.novuSecretKey) return 0
+  if (env.novuSecretKey) {
+    try {
+      const url = new URL(
+        `/v1/subscribers/${encodeURIComponent(subscriberId)}/notifications/unseen`,
+        novuRestBaseUrl
+      )
+      url.searchParams.set('seen', 'false')
+      url.searchParams.set('limit', '100')
 
-  const url = new URL(
-    `/v1/subscribers/${encodeURIComponent(subscriberId)}/notifications/unseen`,
-    novuRestBaseUrl
-  )
-  url.searchParams.set('seen', 'false')
-  url.searchParams.set('limit', '10000')
+      const response = await fetch(url.toString(), {
+        headers: {
+          Authorization: `ApiKey ${env.novuSecretKey}`,
+          'Content-Type': 'application/json',
+        },
+      })
 
-  const response = await fetch(url.toString(), {
-    headers: {
-      Authorization: `ApiKey ${env.novuSecretKey}`,
-      'Content-Type': 'application/json',
-    },
-  })
-
-  if (!response.ok) {
-    const text = await response.text()
-    throw new Error(`Unable to fetch unread count from Novu: ${response.status} ${text}`)
+      if (response.ok) {
+        const body = await response.json()
+        const count = pickNonNegativeCount(body)
+        if (count !== null) return count
+      }
+    } catch (error) {
+      console.warn('[notifications] subscriber /notifications/unseen failed:', error?.message ?? error)
+    }
   }
 
-  const body = await response.json()
-  if (typeof body?.count === 'number' && body.count >= 0) return body.count
+  try {
+    const fromFeed = await getUnreadFromSubscriberFeedTotalCount(subscriberId)
+    if (fromFeed !== null) return fromFeed
+  } catch (error) {
+    console.warn('[notifications] subscriber feed totalCount failed:', error?.message ?? error)
+  }
+
+  if (env.novuApplicationIdentifier) {
+    try {
+      const unread = await getNotificationFeed(subscriberId, { limit: 50, unreadOnly: true })
+      return Array.isArray(unread) ? unread.length : 0
+    } catch (error) {
+      console.warn('[notifications] inbox feed unread-only count failed:', error?.message ?? error)
+    }
+  }
+
   return 0
 }
 
