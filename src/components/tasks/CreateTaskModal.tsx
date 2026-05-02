@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { todayIsoDate } from '@/lib/format-due-date'
+import { filterUsersInWorkspace, userBelongsToWorkspace } from '@/lib/workspace-members'
 import { useTaskStore } from '@/store/task-store'
 import type { TaskStatus } from '@/types/task'
 
@@ -44,6 +45,16 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
   const [assignedToIds, setAssignedToIds] = useState<string[]>([])
   const [projectId, setProjectId] = useState<string>(activeProjectId ?? '')
   const [titleError, setTitleError] = useState('')
+
+  const selectedProject = useMemo(
+    () => projects.find((p) => p.id === projectId),
+    [projects, projectId],
+  )
+  const assignableUsers = useMemo(
+    () => filterUsersInWorkspace(users, selectedProject?.workspaceId),
+    [users, selectedProject?.workspaceId],
+  )
+
   const statusLabel: Record<TaskStatus, string> = {
     todo: 'To do',
     'in-progress': 'In progress',
@@ -68,12 +79,13 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
       return
     }
     setTitleError('')
+    const allowedIds = new Set(assignableUsers.map((u) => u.id))
     const created = await addTask({
       title: trimmed,
       description: description.trim(),
       status,
       dueDate,
-      assignedToIds,
+      assignedToIds: assignedToIds.filter((id) => allowedIds.has(id)),
       projectId,
     })
     if (created) {
@@ -140,7 +152,24 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
             <Field>
               <FieldLabel htmlFor="task-project">Project</FieldLabel>
               <FieldContent>
-                <Select value={projectId} onValueChange={(value) => setProjectId(value ?? '')}>
+                <Select
+                  value={projectId}
+                  onValueChange={(value) => {
+                    const next = value ?? ''
+                    setProjectId(next)
+                    const ws = projects.find((p) => p.id === next)?.workspaceId
+                    if (!ws) {
+                      setAssignedToIds([])
+                      return
+                    }
+                    setAssignedToIds((prev) =>
+                      prev.filter((id) => {
+                        const u = users.find((x) => x.id === id)
+                        return u ? userBelongsToWorkspace(u, String(ws)) : false
+                      }),
+                    )
+                  }}
+                >
                   <SelectTrigger id="task-project" className="w-full min-w-0">
                     <SelectValue>{projects.find((project) => project.id === projectId)?.name ?? 'Select project'}</SelectValue>
                   </SelectTrigger>
@@ -199,10 +228,16 @@ export function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
                 <div className="space-y-2 rounded-lg border border-white/10 bg-white/4 p-3">
                   {isUsersLoading ? (
                     <p className="text-xs text-muted-foreground">Loading users...</p>
-                  ) : users.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No users available.</p>
+                  ) : !projectId ? (
+                    <p className="text-xs text-muted-foreground">
+                      Select a project first — only teammates from that project&apos;s workspace appear here.
+                    </p>
+                  ) : assignableUsers.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      No users in this project&apos;s workspace yet. Invite people from Team, or pick another project.
+                    </p>
                   ) : (
-                    users.map((user) => (
+                    assignableUsers.map((user) => (
                       <label
                         key={user.id}
                         className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 hover:bg-white/5"
