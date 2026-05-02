@@ -313,9 +313,34 @@ export async function deleteUserApi(userId: string): Promise<{ message: string }
   })
 }
 
+type ProjectApiRow = Record<string, unknown>
+
+function mapProjectFromApi(row: ProjectApiRow): Project {
+  const status = row.status === 'archived' ? 'archived' : 'active'
+  return {
+    id: String(row.id ?? ''),
+    name: String(row.name ?? ''),
+    description: typeof row.description === 'string' ? row.description : undefined,
+    workspaceId: String(row.workspaceId ?? ''),
+    createdBy: String(row.createdBy ?? ''),
+    status,
+    planStartMonth:
+      typeof row.planStartMonth === 'string' && row.planStartMonth.trim() !== ''
+        ? row.planStartMonth.trim()
+        : undefined,
+    planEndMonth:
+      typeof row.planEndMonth === 'string' && row.planEndMonth.trim() !== ''
+        ? row.planEndMonth.trim()
+        : undefined,
+    createdAt: typeof row.createdAt === 'string' ? row.createdAt : undefined,
+    updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : undefined,
+  }
+}
+
 export async function fetchProjectsApi(): Promise<Project[]> {
-  const result = await request<{ projects: Project[] }>('/projects')
-  return Array.isArray(result.projects) ? result.projects : []
+  const result = await request<{ projects: ProjectApiRow[] }>('/projects')
+  const list = Array.isArray(result.projects) ? result.projects : []
+  return list.map(mapProjectFromApi)
 }
 
 export async function createProjectApi(input: {
@@ -326,10 +351,11 @@ export async function createProjectApi(input: {
   planStartMonth: string
   planEndMonth: string
 }): Promise<Project> {
-  return request<Project>('/projects', {
+  const row = await request<ProjectApiRow>('/projects', {
     method: 'POST',
     body: JSON.stringify(input),
   })
+  return mapProjectFromApi(row)
 }
 
 export async function updateProjectApi(
@@ -343,10 +369,11 @@ export async function updateProjectApi(
     planEndMonth?: string | null
   }
 ): Promise<Project> {
-  return request<Project>(`/projects/${projectId}`, {
+  const row = await request<ProjectApiRow>(`/projects/${projectId}`, {
     method: 'PATCH',
     body: JSON.stringify(input),
   })
+  return mapProjectFromApi(row)
 }
 
 export async function deleteProjectApi(projectId: string): Promise<void> {

@@ -65,4 +65,10 @@ projectSchema.set('toJSON', {
   },
 })
 
+// Drop a stale compiled model so new schema paths (e.g. plan months) apply after code changes
+// without requiring a manual process restart.
+if (mongoose.models.Project) {
+  delete mongoose.models.Project
+}
+
 export const ProjectModel = mongoose.model('Project', projectSchema)
