@@ -239,6 +239,13 @@ export async function getUnreadNotificationCount(subscriberId) {
         const body = await response.json()
         const count = pickNonNegativeCount(body)
         if (count !== null) return count
+      } else {
+        const text = await response.text().catch(() => '')
+        console.warn(
+          '[notifications] inbox /notifications/count not ok:',
+          response.status,
+          text.slice(0, 300)
+        )
       }
     } catch (error) {
       console.warn('[notifications] inbox /notifications/count failed:', error?.message ?? error)
@@ -252,7 +259,8 @@ export async function getUnreadNotificationCount(subscriberId) {
         novuRestBaseUrl
       )
       url.searchParams.set('seen', 'false')
-      url.searchParams.set('limit', '100')
+      // Novu validates limit <= 1000 (422 if exceeded).
+      url.searchParams.set('limit', '1000')
 
       const response = await fetch(url.toString(), {
         headers: {
@@ -265,6 +273,13 @@ export async function getUnreadNotificationCount(subscriberId) {
         const body = await response.json()
         const count = pickNonNegativeCount(body)
         if (count !== null) return count
+      } else {
+        const text = await response.text().catch(() => '')
+        console.warn(
+          '[notifications] subscriber /notifications/unseen not ok:',
+          response.status,
+          text.slice(0, 300)
+        )
       }
     } catch (error) {
       console.warn('[notifications] subscriber /notifications/unseen failed:', error?.message ?? error)
