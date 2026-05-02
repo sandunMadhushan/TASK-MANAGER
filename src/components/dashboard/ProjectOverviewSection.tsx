@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
-import { FolderKanban } from "lucide-react";
-import { useMemo } from "react";
+import { CalendarClock, FolderKanban } from "lucide-react";
+import { useMemo, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
-import { parseLocalDate } from "@/lib/format-due-date";
+import { formatDueDateLabel, parseLocalDate } from "@/lib/format-due-date";
+import { cn } from "@/lib/utils";
 import {
   addPlanMonths,
   formatPlanMonthLabel,
@@ -29,44 +30,51 @@ function addDays(base: Date, days: number): Date {
   return x;
 }
 
-function MiniDueTimeline({ tasks, anchorDate }: { tasks: Task[]; anchorDate: Date }) {
-  const windowStart = useMemo(() => startOfLocalDay(anchorDate), [anchorDate]);
-  const windowEnd = useMemo(
-    () => addDays(windowStart, HORIZON_DAYS),
-    [windowStart],
-  );
-  const totalMs = windowEnd.getTime() - windowStart.getTime();
+function daysFromToday(due: Date, todayStart: Date): number {
+  return Math.round((startOfLocalDay(due).getTime() - todayStart.getTime()) / 86400000);
+}
 
-  const markers = useMemo(() => {
+function toLocalIsoDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function dueStatusChip(due: Date, todayStart: Date, windowEnd: Date): { label: string; className: string } {
+  const d = daysFromToday(due, todayStart);
+  if (d < 0) {
+    const late = Math.abs(d);
+    return {
+      label: late === 1 ? "1 day late" : `${late} days late`,
+      className: "border-red-400/45 bg-red-500/15 text-red-100",
+    };
+  }
+  if (d === 0) return { label: "Today", className: "border-amber-400/45 bg-amber-500/15 text-amber-50" };
+  if (d === 1) return { label: "Tomorrow", className: "border-violet-400/45 bg-violet-500/15 text-violet-100" };
+  if (due.getTime() > windowEnd.getTime()) {
+    return { label: "Later", className: "border-white/15 bg-white/8 text-muted-foreground" };
+  }
+  return { label: `In ${d} days`, className: "border-violet-400/45 bg-violet-500/15 text-violet-100" };
+}
+
+const UPCOMING_LIST_MAX = 5;
+
+/** Readable list of open tasks with due dates (replaces abstract mini-timeline). */
+function UpcomingDueTasks({ tasks, anchorDate }: { tasks: Task[]; anchorDate: Date }) {
+  const windowStart = useMemo(() => startOfLocalDay(anchorDate), [anchorDate]);
+  const windowEnd = useMemo(() => addDays(windowStart, HORIZON_DAYS), [windowStart]);
+
+  const rows = useMemo(() => {
     const open = tasks.filter((t) => t.status !== "done");
-    const out: { key: string; pct: number; overdue: boolean }[] = [];
+    const out: { task: Task; due: Date }[] = [];
     for (const t of open) {
       const due = startOfLocalDay(parseLocalDate(t.dueDate));
       if (Number.isNaN(due.getTime())) continue;
-      let pct = ((due.getTime() - windowStart.getTime()) / totalMs) * 100;
-      let overdue = false;
-      if (due < windowStart) {
-        pct = 1.5;
-        overdue = true;
-      } else if (due > windowEnd) {
-        pct = 99;
-      } else {
-        pct = Math.min(99, Math.max(0, pct));
-      }
-      out.push({ key: t.id, pct, overdue });
+      out.push({ task: t, due });
     }
+    out.sort((a, b) => a.due.getTime() - b.due.getTime());
     return out;
-  }, [tasks, totalMs, windowEnd, windowStart]);
+  }, [tasks]);
 
-  const todayPct = useMemo(() => {
-    const day = startOfLocalDay(anchorDate);
-    return Math.min(
-      100,
-      Math.max(0, ((day.getTime() - windowStart.getTime()) / totalMs) * 100),
-    );
-  }, [anchorDate, totalMs, windowStart]);
-
-  if (markers.length === 0) {
+  if (rows.length === 0) {
     return (
       <p className="text-[11px] text-muted-foreground">
         No open tasks with due dates in this project.
@@ -74,51 +82,65 @@ function MiniDueTimeline({ tasks, anchorDate }: { tasks: Task[]; anchorDate: Dat
     );
   }
 
-  const overdueCount = markers.filter((m) => m.overdue).length;
+  const overdueCount = rows.filter((r) => r.due < windowStart).length;
+  const shown = rows.slice(0, UPCOMING_LIST_MAX);
+  const more = rows.length - shown.length;
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
         <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          Upcoming deadlines (next {HORIZON_DAYS} days)
+          Next deadlines
         </p>
-        <div className="inline-flex items-center gap-3 text-[10px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
-            <span className="size-2 rounded-full bg-violet-400/95" />
-            Upcoming
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <span className="size-2 rounded-full bg-red-400/95" />
-            Overdue
-          </span>
-        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Horizon: today → {formatDueDateLabel(toLocalIsoDate(windowEnd))}
+        </p>
       </div>
-      <div className="relative h-7 rounded-md border border-white/10 bg-black/30">
-        <div
-          className="pointer-events-none absolute inset-y-0 w-px bg-primary/70"
-          style={{ left: `${todayPct}%` }}
-          title="Today"
-        />
-        {markers.map((m) => (
-          <div
-            key={m.key}
-            className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 shadow-sm"
-            style={{
-              left: `${m.pct}%`,
-              backgroundColor: m.overdue
-                ? "rgb(248 113 113 / 0.95)"
-                : "rgb(167 139 250 / 0.95)",
-            }}
-            title={m.overdue ? "Overdue" : "Due in window"}
-          />
-        ))}
+      <ul className="space-y-1.5" aria-label="Open tasks by due date">
+        {shown.map(({ task, due }) => {
+          const chip = dueStatusChip(due, windowStart, windowEnd);
+          return (
+            <li
+              key={task.id}
+              className="flex gap-2 rounded-lg border border-white/10 bg-black/25 px-2 py-1.5 sm:px-2.5"
+            >
+              <CalendarClock
+                className="mt-0.5 size-3.5 shrink-0 text-muted-foreground opacity-80"
+                aria-hidden
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[11px] font-medium leading-snug text-foreground" title={task.title}>
+                  {task.title}
+                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-[10px] tabular-nums text-muted-foreground">
+                    {formatDueDateLabel(task.dueDate)}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className={cn("h-5 border px-1.5 py-0 text-[9px] font-medium leading-none", chip.className)}
+                  >
+                    {chip.label}
+                  </Badge>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="space-y-0.5 text-[10px] leading-relaxed text-muted-foreground">
+        {more > 0 ? (
+          <p>
+            +{more} more open task{more === 1 ? "" : "s"} with dates — open Tasks for the full list.
+          </p>
+        ) : null}
+        <p>
+          {overdueCount > 0
+            ? `${overdueCount} overdue · soonest due dates first.`
+            : "Soonest due dates first."}{" "}
+          <span className="text-muted-foreground/80">“Later” is after this {HORIZON_DAYS}-day horizon.</span>
+        </p>
       </div>
-      <p className="text-[11px] text-muted-foreground">
-        Timeline starts at today and runs {HORIZON_DAYS} days ahead.{" "}
-        {overdueCount > 0
-          ? `${overdueCount} overdue task${overdueCount === 1 ? "" : "s"} shown in red.`
-          : "No overdue tasks in this project."}
-      </p>
     </div>
   );
 }
@@ -194,8 +216,11 @@ const GANTT_BAR_COLORS = [
   "rgb(94 234 212 / 0.9)",
 ];
 
-const AXIS_H_PX = 26;
-const ROW_H = 40;
+const AXIS_H_PX = 28;
+const ROW_H = 44;
+/** Minimum pixels per month on narrow viewports (horizontal scroll when needed). */
+const GANTT_PX_PER_MONTH = 54;
+const GANTT_LABEL_COL_PX = 148;
 
 /** First of each calendar month from `start` through `end` (inclusive of months touched). */
 function listMonthStartsBetween(start: Date, end: Date): Date[] {
@@ -270,117 +295,141 @@ function ProjectScheduleGantt({
   const rangeLabel = `${formatPlanMonthLabel(rows.reduce((a, r) => (r.start < a ? r.start : a), rows[0].start))} — ${formatPlanMonthLabel(rows.reduce((a, r) => (r.end > a ? r.end : a), rows[0].end))}`;
   const todayX = todayPct ?? 0;
 
+  const timelineMinPx = monthTicks.length * GANTT_PX_PER_MONTH;
+  const innerRowMinPx = GANTT_LABEL_COL_PX + 12 + timelineMinPx;
+  const scrollWrapperStyle: CSSProperties = {
+    ["--gantt-tl-min" as string]: `${timelineMinPx}px`,
+    ["--gantt-inner-min" as string]: `${innerRowMinPx}px`,
+  };
+
   return (
-    <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4">
+    <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-3 sm:p-4">
       <div className="space-y-1">
         <h3 className="text-sm font-semibold tracking-tight text-foreground">Project timeline</h3>
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
+        <p className="hidden text-[11px] leading-relaxed text-muted-foreground sm:block">
           Bars show each project from its <span className="text-foreground/90">start month</span> through its{" "}
           <span className="text-foreground/90">estimated close month</span>. Vertical lines mark calendar months; the
           bright line is today.
         </p>
+        <p className="text-[10px] text-muted-foreground sm:hidden">
+          Scroll sideways on small screens. Bright line = today.
+        </p>
         <p className="text-[10px] text-muted-foreground/90">Chart range: {rangeLabel}</p>
       </div>
 
-      <div className="flex gap-3 sm:gap-4">
-        <div
-          className="flex w-[6.5rem] shrink-0 flex-col sm:w-[8.5rem]"
-          style={{ paddingTop: AXIS_H_PX }}
-        >
-          {rows.map((r) => (
+      {/* Below xl: horizontal scroll + min width so month labels do not overlap; xl+: fluid width */}
+      <div
+        className="-mx-1 touch-pan-x overflow-x-auto overscroll-x-contain px-1 xl:mx-0 xl:overflow-x-visible xl:px-0"
+        style={scrollWrapperStyle}
+      >
+        <div className="flex min-w-[max(100%,var(--gantt-inner-min))] gap-2 sm:gap-3 xl:min-w-0 xl:w-full">
+          <div
+            className="flex w-[min(42vw,9.5rem)] shrink-0 flex-col sm:w-[10.5rem] xl:w-[8.5rem]"
+            style={{ paddingTop: AXIS_H_PX }}
+          >
+            {rows.map((r) => (
+              <div
+                key={`label-${r.id}`}
+                className="flex flex-col justify-center border-b border-white/5 py-1.5 xl:py-1.5"
+                style={{ minHeight: ROW_H }}
+              >
+                <p
+                  className="text-[11px] font-medium leading-snug text-foreground xl:truncate xl:whitespace-nowrap"
+                  title={r.name}
+                >
+                  {r.name}
+                </p>
+                <p className="hyphens-auto break-words text-[10px] leading-snug text-muted-foreground xl:truncate">
+                  <span className="xl:hidden">
+                    {formatPlanMonthLabel(r.start)} →<wbr /> {formatPlanMonthLabel(r.end)}
+                  </span>
+                  <span className="hidden xl:inline">
+                    {formatPlanMonthLabel(r.start)} → {formatPlanMonthLabel(r.end)}
+                  </span>
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="relative min-w-[var(--gantt-tl-min)] flex-1 overflow-hidden rounded-md border border-white/10 bg-black/35 xl:min-w-0">
+            {/* Month grid + today (behind bars) */}
             <div
-              key={`label-${r.id}`}
-              className="flex flex-col justify-center border-b border-white/5 py-1.5"
-              style={{ minHeight: ROW_H }}
+              className="pointer-events-none absolute z-0 bg-white/[0.03]"
+              style={{ top: AXIS_H_PX, left: 0, right: 0, bottom: 0 }}
             >
-              <p className="truncate text-[11px] font-medium text-foreground" title={r.name}>
-                {r.name}
-              </p>
-              <p className="truncate text-[10px] text-muted-foreground">
-                {formatPlanMonthLabel(r.start)} → {formatPlanMonthLabel(r.end)}
-              </p>
+              {monthTicks.map((d) => {
+                const left = pctAt(d.getTime());
+                if (left < 0 || left > 100) return null;
+                return (
+                  <div
+                    key={d.toISOString()}
+                    className="absolute top-0 bottom-0 w-px bg-white/12"
+                    style={{ left: `${left}%` }}
+                  />
+                );
+              })}
             </div>
-          ))}
-        </div>
+            <div
+              className="pointer-events-none absolute inset-y-0 top-0 z-[2] w-px bg-primary shadow-[0_0_6px_rgb(139_92_246/0.55)]"
+              style={{ left: `${todayX}%` }}
+              title="Today"
+            />
 
-        <div className="relative min-w-0 flex-1 overflow-hidden rounded-md border border-white/10 bg-black/35">
-          {/* Month grid + today (behind bars) */}
-          <div
-            className="pointer-events-none absolute z-0 bg-white/[0.03]"
-            style={{ top: AXIS_H_PX, left: 0, right: 0, bottom: 0 }}
-          >
-            {monthTicks.map((d) => {
-              const left = pctAt(d.getTime());
-              if (left < 0 || left > 100) return null;
-              return (
-                <div
-                  key={d.toISOString()}
-                  className="absolute top-0 bottom-0 w-px bg-white/12"
-                  style={{ left: `${left}%` }}
-                />
-              );
-            })}
-          </div>
-          <div
-            className="pointer-events-none absolute inset-y-0 top-0 z-[2] w-px bg-primary shadow-[0_0_6px_rgb(139_92_246/0.55)]"
-            style={{ left: `${todayX}%` }}
-            title="Today"
-          />
-
-          {/* Month labels */}
-          <div
-            className="relative z-[1] border-b border-white/10 bg-black/40 px-1"
-            style={{ height: AXIS_H_PX }}
-          >
-            {monthTicks.map((d) => {
-              const left = pctAt(d.getTime());
-              if (left < -2 || left > 102) return null;
-              return (
-                <span
-                  key={`lab-${d.toISOString()}`}
-                  className="absolute top-1 max-w-[3.5rem] truncate text-[10px] font-medium tabular-nums text-muted-foreground"
-                  style={{ left: `${left}%`, transform: "translateX(2px)" }}
-                >
-                  {axisMonthLabel(d)}
-                </span>
-              );
-            })}
-            <span
-              className="absolute bottom-0.5 text-[9px] font-medium uppercase tracking-wide text-primary drop-shadow-sm"
-              style={{ left: `${todayX}%`, transform: "translateX(-50%)" }}
+            {/* Month labels */}
+            <div
+              className="relative z-[1] border-b border-white/10 bg-black/40 px-0.5 sm:px-1"
+              style={{ height: AXIS_H_PX }}
             >
-              Today
-            </span>
-          </div>
+              {monthTicks.map((d) => {
+                const left = pctAt(d.getTime());
+                if (left < -2 || left > 102) return null;
+                return (
+                  <span
+                    key={`lab-${d.toISOString()}`}
+                    className="absolute top-1 inline-block w-[52px] -translate-x-0 text-[10px] font-medium tabular-nums text-muted-foreground xl:max-w-[3.75rem] xl:translate-x-0 xl:truncate"
+                    style={{ left: `${left}%`, marginLeft: 0 }}
+                  >
+                    <span className="block pl-0.5 xl:inline xl:pl-0">{axisMonthLabel(d)}</span>
+                  </span>
+                );
+              })}
+              <span
+                className="absolute bottom-0.5 z-[3] whitespace-nowrap text-[9px] font-medium uppercase tracking-wide text-primary drop-shadow-sm"
+                style={{ left: `${todayX}%`, transform: "translateX(-50%)" }}
+              >
+                Today
+              </span>
+            </div>
 
-          {/* Bars */}
-          <div className="relative z-[1]">
-            {rows.map((r, i) => {
-              const t0 = monthStartDate(r.start).getTime();
-              const t1 = monthEndDate(r.end).getTime();
-              const left = pctAt(t0);
-              const width = ((t1 - t0) / totalMs) * 100;
-              const bg = GANTT_BAR_COLORS[i % GANTT_BAR_COLORS.length];
-              return (
-                <div
-                  key={r.id}
-                  className="flex items-center border-b border-white/5 px-2 py-1.5 last:border-b-0"
-                  style={{ minHeight: ROW_H }}
-                >
-                  <div className="relative h-7 w-full rounded-md bg-white/[0.06]">
-                    <div
-                      className="absolute inset-y-1 rounded-md shadow-sm ring-1 ring-white/15"
-                      style={{
-                        left: `${Math.max(0, Math.min(100, left))}%`,
-                        width: `${Math.max(0.8, Math.min(100, width))}%`,
-                        backgroundColor: bg,
-                      }}
-                      title={`${formatPlanMonthLabel(r.start)} → ${formatPlanMonthLabel(r.end)}`}
-                    />
+            {/* Bars */}
+            <div className="relative z-[1]">
+              {rows.map((r, i) => {
+                const t0 = monthStartDate(r.start).getTime();
+                const t1 = monthEndDate(r.end).getTime();
+                const left = pctAt(t0);
+                const width = ((t1 - t0) / totalMs) * 100;
+                const bg = GANTT_BAR_COLORS[i % GANTT_BAR_COLORS.length];
+                return (
+                  <div
+                    key={r.id}
+                    className="flex items-center border-b border-white/5 px-1.5 py-2 last:border-b-0 sm:px-2"
+                    style={{ minHeight: ROW_H }}
+                  >
+                    <div className="relative h-8 w-full rounded-md bg-white/[0.06] sm:h-7">
+                      <div
+                        className="absolute inset-y-1.5 rounded-md shadow-sm ring-1 ring-white/15 sm:inset-y-1"
+                        style={{
+                          left: `${Math.max(0, Math.min(100, left))}%`,
+                          width: `${Math.max(0.8, Math.min(100, width))}%`,
+                          backgroundColor: bg,
+                        }}
+                        title={`${formatPlanMonthLabel(r.start)} → ${formatPlanMonthLabel(r.end)}`}
+                      />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -486,7 +535,7 @@ export function ProjectOverviewSection({ tasks, projects, anchorDate }: Props) {
                     </Badge>
                   </div>
                   <StatusStrip todo={todo} inProgress={inProgress} done={done} />
-                  <MiniDueTimeline tasks={list} anchorDate={anchorDate} />
+                  <UpcomingDueTasks tasks={list} anchorDate={anchorDate} />
                 </Link>
               </motion.div>
             );
