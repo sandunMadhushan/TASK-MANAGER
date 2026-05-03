@@ -2,6 +2,8 @@ import { execSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { setCargoPackageVersion } from './set-cargo-package-version.mjs'
+
 const root = process.cwd()
 const packageJsonPath = path.join(root, 'package.json')
 const tauriConfPath = path.join(root, 'src-tauri', 'tauri.conf.json')
@@ -35,12 +37,11 @@ tauriConf.version = nextVersion
 fs.writeFileSync(tauriConfPath, `${JSON.stringify(tauriConf, null, 2)}\n`)
 
 const cargoToml = fs.readFileSync(cargoTomlPath, 'utf8')
-const cargoUpdated = cargoToml.replace(
-  /^version\s*=\s*"[^"]+"/m,
-  `version = "${nextVersion}"`
-)
-if (cargoUpdated === cargoToml) {
-  console.error('Could not update version in src-tauri/Cargo.toml')
+const cargoUpdated = setCargoPackageVersion(cargoToml, nextVersion)
+if (!cargoUpdated) {
+  console.error(
+    'Could not update [package] version in src-tauri/Cargo.toml (expected version = "x.y.z")'
+  )
   process.exit(1)
 }
 fs.writeFileSync(cargoTomlPath, cargoUpdated)
