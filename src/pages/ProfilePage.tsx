@@ -7,7 +7,14 @@ import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { changePasswordApi, updateUserApi } from '@/services/task-api'
@@ -34,6 +41,8 @@ export function ProfilePage() {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<CroppedArea | null>(null)
   const [formError, setFormError] = useState('')
   const [passwordError, setPasswordError] = useState('')
+  const [removeAvatarConfirmOpen, setRemoveAvatarConfirmOpen] = useState(false)
+  const [saveProfileConfirmOpen, setSaveProfileConfirmOpen] = useState(false)
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
@@ -44,7 +53,7 @@ export function ProfilePage() {
     setAvatarUrl(currentUser?.avatarUrl ?? '')
   }, [currentUser?.avatarUrl, currentUser?.email, currentUser?.name])
 
-  async function handleSubmit(event: FormEvent) {
+  function handleSubmit(event: FormEvent) {
     event.preventDefault()
     if (!currentUser?.id) return
 
@@ -60,6 +69,18 @@ export function ProfilePage() {
       return
     }
 
+    setFormError('')
+    setSaveProfileConfirmOpen(true)
+  }
+
+  async function performSaveProfile() {
+    if (!currentUser?.id) return
+    const trimmedName = name.trim()
+    const trimmedEmail = email.trim().toLowerCase()
+    const trimmedAvatarUrl = avatarUrl.trim()
+    if (!trimmedName || !trimmedEmail) return
+
+    setSaveProfileConfirmOpen(false)
     setIsSaving(true)
     setFormError('')
     try {
@@ -248,6 +269,54 @@ export function ProfilePage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={saveProfileConfirmOpen} onOpenChange={setSaveProfileConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save profile changes?</DialogTitle>
+            <DialogDescription>
+              Your name, email, and avatar preview will be updated for this workspace.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setSaveProfileConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={isSaving} onClick={() => void performSaveProfile()}>
+              {isSaving ? 'Saving...' : 'Save profile'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={removeAvatarConfirmOpen} onOpenChange={setRemoveAvatarConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remove avatar from preview?</DialogTitle>
+            <DialogDescription>
+              Your profile picture will be cleared in this form. Click <span className="font-medium text-foreground">Save profile</span> to apply the change to your account.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setRemoveAvatarConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                setRemoveAvatarConfirmOpen(false)
+                setAvatarUrl('')
+                toast.success('Avatar removed from preview', {
+                  description: 'Save profile to update your account.',
+                })
+              }}
+            >
+              Remove avatar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <motion.div
         animate={{ opacity: 1, y: 0 }}
         initial={{ opacity: 0, y: 10 }}
@@ -347,7 +416,7 @@ export function ProfilePage() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => setAvatarUrl('')}
+                  onClick={() => setRemoveAvatarConfirmOpen(true)}
                   disabled={isProcessingAvatar || !avatarUrl}
                 >
                   Remove avatar

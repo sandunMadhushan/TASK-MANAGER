@@ -12,7 +12,14 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -49,6 +56,14 @@ export function TeamPage() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false)
   const [renameGroupTarget, setRenameGroupTarget] = useState<{ id: string; name: string } | null>(null)
   const [renameGroupName, setRenameGroupName] = useState('')
+  const [removeMemberTarget, setRemoveMemberTarget] = useState<{
+    userId: string
+    name: string
+    isLeaving: boolean
+  } | null>(null)
+  const [cancelInviteTarget, setCancelInviteTarget] = useState<{ id: string; email: string } | null>(null)
+  const [inviteSendConfirmOpen, setInviteSendConfirmOpen] = useState(false)
+  const [renameWorkspaceConfirmOpen, setRenameWorkspaceConfirmOpen] = useState(false)
 
   function safeText(value: unknown, fallback: string): string {
     return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback
@@ -150,7 +165,7 @@ export function TeamPage() {
     void loadPendingInvites()
   }, [manageUsersOpen, ownerConfirmedFromTeam])
 
-  async function handleSubmit(event: FormEvent) {
+  function handleInviteFormSubmit(event: FormEvent) {
     event.preventDefault()
     if (!isWorkspaceOwner) {
       setFormError('Only the workspace owner can send invites.')
@@ -162,7 +177,17 @@ export function TeamPage() {
       setFormError('Name and email are required.')
       return
     }
+    setFormError('')
+    setInviteSendConfirmOpen(true)
+  }
 
+  async function performSendInvite() {
+    if (!isWorkspaceOwner) return
+    const trimmedName = name.trim()
+    const trimmedEmail = email.trim().toLowerCase()
+    if (!trimmedName || !trimmedEmail) return
+
+    setInviteSendConfirmOpen(false)
     setIsSaving(true)
     setFormError('')
     try {
@@ -191,7 +216,14 @@ export function TeamPage() {
     }
   }
 
-  async function handleCancelInvite(inviteId: string) {
+  function openCancelInviteDialog(inviteId: string, email: string) {
+    setCancelInviteTarget({ id: inviteId, email })
+  }
+
+  async function confirmCancelInvite() {
+    if (!cancelInviteTarget) return
+    const inviteId = cancelInviteTarget.id
+    setCancelInviteTarget(null)
     setCancellingInviteId(inviteId)
     try {
       await cancelWorkspacePendingInviteApi(inviteId)
@@ -206,9 +238,18 @@ export function TeamPage() {
     }
   }
 
-  async function handleDelete(userId: string) {
-    setDeletingUserId(userId)
+  function openRemoveMemberDialog(userId: string) {
+    const user = users.find((u) => u.id === userId)
+    const name = user?.name?.trim() || 'This member'
     const isLeaving = currentUser?.id === userId && !isWorkspaceOwner
+    setRemoveMemberTarget({ userId, name, isLeaving })
+  }
+
+  async function confirmRemoveMember() {
+    if (!removeMemberTarget) return
+    const { userId, isLeaving } = removeMemberTarget
+    setRemoveMemberTarget(null)
+    setDeletingUserId(userId)
     try {
       const { message } = await deleteUserApi(userId)
       await Promise.all([fetchUsers(), fetchTasks()])
@@ -235,7 +276,7 @@ export function TeamPage() {
     setRenameDialogOpen(true)
   }
 
-  async function handleRenameGroupSubmit(event: FormEvent) {
+  function handleRenameGroupSubmit(event: FormEvent) {
     event.preventDefault()
     if (!renameGroupTarget) return
     const nextName = renameGroupName.trim()
@@ -247,6 +288,17 @@ export function TeamPage() {
       setRenameDialogOpen(false)
       return
     }
+    setRenameWorkspaceConfirmOpen(true)
+  }
+
+  async function performRenameWorkspace() {
+    if (!renameGroupTarget) return
+    const nextName = renameGroupName.trim()
+    if (!nextName || nextName === renameGroupTarget.name) {
+      setRenameWorkspaceConfirmOpen(false)
+      return
+    }
+    setRenameWorkspaceConfirmOpen(false)
     setRenamingGroupId(renameGroupTarget.id)
     try {
       await updateWorkspaceNameApi(renameGroupTarget.id, nextName)
@@ -265,7 +317,13 @@ export function TeamPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open)
+          if (!open) setInviteSendConfirmOpen(false)
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Invite user</DialogTitle>
@@ -273,7 +331,7 @@ export function TeamPage() {
               Add a workspace member by email. Existing accounts get a team invite notification.
             </DialogDescription>
           </DialogHeader>
-          <form className="space-y-3" onSubmit={handleSubmit}>
+          <form className="space-y-3" onSubmit={handleInviteFormSubmit}>
             {formError ? (
               <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                 {formError}
@@ -314,6 +372,28 @@ export function TeamPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={inviteSendConfirmOpen} onOpenChange={setInviteSendConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send this invite?</DialogTitle>
+            <DialogDescription>
+              We will email <span className="font-medium text-foreground">{email.trim().toLowerCase()}</span> and add{' '}
+              <span className="font-medium text-foreground">{name.trim() || 'this person'}</span> to your workspace
+              invite flow.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setInviteSendConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={isSaving} onClick={() => void performSendInvite()}>
+              {isSaving ? 'Sending...' : 'Send invite'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={manageUsersOpen} onOpenChange={setManageUsersOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
@@ -346,7 +426,7 @@ export function TeamPage() {
                         variant="outline"
                         type="button"
                         disabled={cancellingInviteId === invite.id}
-                        onClick={() => void handleCancelInvite(invite.id)}
+                        onClick={() => openCancelInviteDialog(invite.id, invite.targetEmail)}
                       >
                         {cancellingInviteId === invite.id ? 'Cancelling…' : 'Cancel invite'}
                       </Button>
@@ -388,7 +468,7 @@ export function TeamPage() {
                         variant="destructive"
                         type="button"
                         disabled={deletingUserId === user.id}
-                        onClick={() => void handleDelete(user.id)}
+                        onClick={() => openRemoveMemberDialog(user.id)}
                       >
                         <Trash2 className="size-3.5" />
                         {deletingUserId === user.id ? 'Removing...' : 'Remove from team'}
@@ -400,7 +480,7 @@ export function TeamPage() {
                         variant="outline"
                         type="button"
                         disabled={deletingUserId === user.id}
-                        onClick={() => void handleDelete(user.id)}
+                        onClick={() => openRemoveMemberDialog(user.id)}
                       >
                         <LogOut className="size-3.5" />
                         {deletingUserId === user.id ? 'Leaving...' : 'Leave team'}
@@ -414,12 +494,75 @@ export function TeamPage() {
         </DialogContent>
       </Dialog>
       <Dialog
+        open={Boolean(removeMemberTarget)}
+        onOpenChange={(open) => {
+          if (!open) setRemoveMemberTarget(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{removeMemberTarget?.isLeaving ? 'Leave workspace?' : 'Remove member?'}</DialogTitle>
+            <DialogDescription>
+              {removeMemberTarget?.isLeaving ? (
+                <>
+                  You will leave this team workspace. You may need a new invite to rejoin.
+                </>
+              ) : (
+                <>
+                  Remove <span className="font-medium text-foreground">{removeMemberTarget?.name}</span> from
+                  this workspace? They keep their account and get a solo workspace.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setRemoveMemberTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant={removeMemberTarget?.isLeaving ? 'default' : 'destructive'}
+              onClick={() => void confirmRemoveMember()}
+            >
+              {removeMemberTarget?.isLeaving ? 'Leave team' : 'Remove from team'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(cancelInviteTarget)}
+        onOpenChange={(open) => {
+          if (!open) setCancelInviteTarget(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancel this invite?</DialogTitle>
+            <DialogDescription>
+              Pending invite to{' '}
+              <span className="font-medium text-foreground">{cancelInviteTarget?.email}</span> will be withdrawn.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setCancelInviteTarget(null)}>
+              Keep invite
+            </Button>
+            <Button type="button" variant="destructive" onClick={() => void confirmCancelInvite()}>
+              Cancel invite
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
         open={renameDialogOpen}
         onOpenChange={(open) => {
           setRenameDialogOpen(open)
           if (!open) {
             setRenameGroupTarget(null)
             setRenameGroupName('')
+            setRenameWorkspaceConfirmOpen(false)
           }
         }}
       >
@@ -450,6 +593,31 @@ export function TeamPage() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={renameWorkspaceConfirmOpen} onOpenChange={setRenameWorkspaceConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename workspace?</DialogTitle>
+            <DialogDescription>
+              Change display name from{' '}
+              <span className="font-medium text-foreground">{renameGroupTarget?.name}</span> to{' '}
+              <span className="font-medium text-foreground">{renameGroupName.trim()}</span>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setRenameWorkspaceConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={renamingGroupId !== null}
+              onClick={() => void performRenameWorkspace()}
+            >
+              {renamingGroupId ? 'Saving...' : 'Rename workspace'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

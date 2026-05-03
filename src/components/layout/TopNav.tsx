@@ -1,11 +1,19 @@
 import { motion } from 'framer-motion'
 import { Menu, Search } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { NovuInboxBell } from '@/components/notifications/NovuInboxBell'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useAuthStore } from '@/store/auth-store'
 
 type TopNavProps = {
@@ -15,6 +23,7 @@ type TopNavProps = {
 export function TopNav({ onMenuClick }: TopNavProps) {
   const currentUser = useAuthStore((s) => s.currentUser)
   const logout = useAuthStore((s) => s.logout)
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
   const fallbackName = (currentUser?.name ?? 'User').slice(0, 2).toUpperCase()
 
@@ -41,6 +50,30 @@ export function TopNav({ onMenuClick }: TopNavProps) {
       initial={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
     >
+      <Dialog open={logoutConfirmOpen} onOpenChange={setLogoutConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Log out?</DialogTitle>
+            <DialogDescription>
+              You will need to sign in again to use Nexus Tasks on this device.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setLogoutConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setLogoutConfirmOpen(false)
+                logout()
+              }}
+            >
+              Log out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="mx-auto flex max-w-7xl items-center gap-2 sm:gap-3">
         <Button
           aria-label="Open navigation"
@@ -108,7 +141,13 @@ export function TopNav({ onMenuClick }: TopNavProps) {
                 <p className="text-[11px] text-muted-foreground">{currentUser?.email ?? ''}</p>
               </div>
             </Button>
-            <Button size="sm" variant="ghost" type="button" className="cursor-pointer" onClick={logout}>
+            <Button
+              size="sm"
+              variant="ghost"
+              type="button"
+              className="cursor-pointer"
+              onClick={() => setLogoutConfirmOpen(true)}
+            >
               Logout
             </Button>
           </div>

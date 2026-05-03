@@ -5,6 +5,14 @@ import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EditTaskModal } from '@/components/tasks/EditTaskModal'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage } from '@/components/ui/avatar'
 import {
   Card,
@@ -36,6 +44,7 @@ type TaskCardProps = {
 export function TaskCard({ task, index }: TaskCardProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [editSession, setEditSession] = useState(0)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const prefersReducedMotion = useReducedMotion()
   const forceReducedMotion = useSettingsStore((s) => s.reducedMotion)
   const compactCards = useSettingsStore((s) => s.compactCards)
@@ -67,6 +76,11 @@ export function TaskCard({ task, index }: TaskCardProps) {
     setEditOpen(true)
   }
 
+  async function confirmDeleteTask() {
+    setDeleteOpen(false)
+    await deleteTask(task.id)
+  }
+
   return (
     <motion.div
       layout
@@ -86,6 +100,25 @@ export function TaskCard({ task, index }: TaskCardProps) {
         open={editOpen}
         onOpenChange={setEditOpen}
       />
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete this task?</DialogTitle>
+            <DialogDescription>
+              <span className="font-medium text-foreground">{task.title}</span> will be removed permanently.
+              This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" onClick={() => void confirmDeleteTask()}>
+              Delete task
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Card
         size={compactCards ? 'sm' : 'default'}
         className={cn(
@@ -218,7 +251,7 @@ export function TaskCard({ task, index }: TaskCardProps) {
                 type="button"
                 className="text-destructive hover:bg-destructive/10 hover:text-destructive focus-visible:ring-destructive/35"
                 disabled={isDeleting || isUpdating}
-                onClick={() => void deleteTask(task.id)}
+                onClick={() => setDeleteOpen(true)}
               >
                 <Trash2 className="size-4" />
               </Button>

@@ -6,7 +6,14 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   NOVU_NOTIFICATIONS_UPDATED_EVENT,
   cacheNovuInboxUnread,
@@ -38,12 +45,23 @@ export function NotificationsPage() {
   const [teamInvites, setTeamInvites] = useState<TeamInviteItem[]>([])
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
   const [selectedInvite, setSelectedInvite] = useState<TeamInviteItem | null>(null)
+  const [markAllReadConfirmOpen, setMarkAllReadConfirmOpen] = useState(false)
+  const [inviteDecisionConfirm, setInviteDecisionConfirm] = useState<{
+    action: 'accept' | 'decline'
+    inviteId: string
+  } | null>(null)
   const fetchUsers = useTaskStore((s) => s.fetchUsers)
   const fetchTasks = useTaskStore((s) => s.fetchTasks)
 
   const subscriberId = useMemo(() => currentUser?.id ?? null, [currentUser])
 
-  async function loadData(options?: { quiet?: boolean; skipLoading?: boolean; skipUnreadFetch?: boolean }) {
+  async function loadData(options?: {
+    quiet?: boolean
+    skipLoading?: boolean
+    skipUnreadFetch?: boolean
+    /** Only when the user clicks Refresh — not used for focus/background reloads. */
+    refreshedToast?: boolean
+  }) {
     if (!subscriberId) return
     if (!options?.skipLoading) {
       setIsLoading(true)
@@ -86,6 +104,9 @@ export function NotificationsPage() {
             description: 'It may have been cancelled or already accepted or declined.',
           })
         }
+      }
+      if (options?.refreshedToast) {
+        toast.success('Refreshed')
       }
     } catch (error) {
       if (!options?.quiet) {
@@ -145,6 +166,7 @@ export function NotificationsPage() {
 
   async function markAllRead() {
     if (!subscriberId) return
+    setMarkAllReadConfirmOpen(false)
     setIsMarking(true)
     try {
       await markAllNotificationsReadApi(subscriberId)
@@ -196,6 +218,22 @@ export function NotificationsPage() {
     }
   }
 
+  async function executeConfirmedInviteDecision() {
+    if (!inviteDecisionConfirm) return
+    const { action, inviteId } = inviteDecisionConfirm
+    setInviteDecisionConfirm(null)
+    if (action === 'accept') {
+      await acceptInvite(inviteId)
+    } else {
+      await declineInvite(inviteId)
+    }
+  }
+
+  const pendingDecisionInvite = useMemo(
+    () => teamInvites.find((i) => i.id === inviteDecisionConfirm?.inviteId) ?? null,
+    [teamInvites, inviteDecisionConfirm?.inviteId]
+  )
+
   function openInviteDialogFromNotification(item: NotificationFeedItem) {
     const payload = (item.payload ?? {}) as Record<string, unknown>
     if (payload.type !== 'team-invite' || !payload.actionRequired) return
@@ -232,14 +270,18 @@ export function NotificationsPage() {
                   type="button"
                   variant="outline"
                   disabled={inviteActionId === selectedInvite.id}
-                  onClick={() => void declineInvite(selectedInvite.id)}
+                  onClick={() =>
+                    setInviteDecisionConfirm({ action: 'decline', inviteId: selectedInvite.id })
+                  }
                 >
                   Decline
                 </Button>
                 <Button
                   type="button"
                   disabled={inviteActionId === selectedInvite.id}
-                  onClick={() => void acceptInvite(selectedInvite.id)}
+                  onClick={() =>
+                    setInviteDecisionConfirm({ action: 'accept', inviteId: selectedInvite.id })
+                  }
                 >
                   {inviteActionId === selectedInvite.id ? <Loader2 className="size-4 animate-spin" /> : null}
                   Accept
@@ -247,6 +289,81 @@ export function NotificationsPage() {
               </div>
             </div>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(inviteDecisionConfirm)}
+        onOpenChange={(open) => {
+          if (!open) setInviteDecisionConfirm(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {inviteDecisionConfirm?.action === 'accept' ? 'Join this workspace?' : 'Decline this invite?'}
+            </DialogTitle>
+            <DialogDescription>
+              {inviteDecisionConfirm?.action === 'accept' ? (
+                <>
+                  {pendingDecisionInvite ? (
+                    <>
+                      You will join the team workspace invited by{' '}
+                      <span className="font-medium text-foreground">{pendingDecisionInvite.inviterName}</span>.
+                    </>
+                  ) : (
+                    'You will accept this team invite and join the workspace.'
+                  )}
+                </>
+              ) : (
+                <>
+                  {pendingDecisionInvite ? (
+                    <>
+                      Decline the invite from{' '}
+                      <span className="font-medium text-foreground">{pendingDecisionInvite.inviterName}</span>? You
+                      can ask for a new invite later.
+                    </>
+                  ) : (
+                    'This invite will be declined.'
+                  )}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setInviteDecisionConfirm(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant={inviteDecisionConfirm?.action === 'decline' ? 'destructive' : 'default'}
+              disabled={Boolean(inviteActionId)}
+              onClick={() => void executeConfirmedInviteDecision()}
+            >
+              {inviteActionId ? <Loader2 className="size-4 animate-spin" /> : null}
+              {inviteDecisionConfirm?.action === 'accept' ? 'Accept invite' : 'Decline invite'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={markAllReadConfirmOpen} onOpenChange={setMarkAllReadConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mark all notifications as read?</DialogTitle>
+            <DialogDescription>
+              Every notification in your inbox feed will be marked read. You can still open history from the bell.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setMarkAllReadConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={isMarking} onClick={() => void markAllRead()}>
+              {isMarking ? <Loader2 className="size-4 animate-spin" /> : null}
+              Mark all as read
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -280,11 +397,20 @@ export function NotificationsPage() {
               </p>
             </div>
             <div className="inline-flex items-center gap-2">
-              <Button variant="outline" type="button" onClick={() => void loadData()} disabled={isLoading}>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => void loadData({ refreshedToast: true })}
+                disabled={isLoading}
+              >
                 {isLoading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
                 Refresh
               </Button>
-              <Button type="button" onClick={() => void markAllRead()} disabled={isMarking || unreadCount === 0}>
+              <Button
+                type="button"
+                onClick={() => setMarkAllReadConfirmOpen(true)}
+                disabled={isMarking || unreadCount === 0}
+              >
                 {isMarking ? <Loader2 className="size-4 animate-spin" /> : null}
                 Mark all as read
               </Button>
@@ -312,7 +438,7 @@ export function NotificationsPage() {
                       <Button
                         size="sm"
                         type="button"
-                        onClick={() => void acceptInvite(invite.id)}
+                        onClick={() => setInviteDecisionConfirm({ action: 'accept', inviteId: invite.id })}
                         disabled={isActing}
                       >
                         {isActing ? <Loader2 className="size-4 animate-spin" /> : null}
@@ -322,7 +448,7 @@ export function NotificationsPage() {
                         size="sm"
                         variant="outline"
                         type="button"
-                        onClick={() => void declineInvite(invite.id)}
+                        onClick={() => setInviteDecisionConfirm({ action: 'decline', inviteId: invite.id })}
                         disabled={isActing}
                       >
                         Decline
